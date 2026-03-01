@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 
-async function fetchArtwork() {
-  const res = await fetch("/api/artwork");
+async function fetchArtwork(withContext) {
+  const res = await fetch(`/api/artwork?context=${withContext}`);
   if (!res.ok) throw new Error(`Server error ${res.status}`);
   return res.json();
 }
@@ -17,7 +17,6 @@ const COLORS = {
 // ── Bouquet variations ────────────────────────────────────────────────────────
 
 function BouquetA() {
-  // Loose, asymmetric — tall stems, daisy + tulip + bud
   return (
     <svg width="44" height="52" viewBox="0 0 44 52" fill="none" xmlns="http://www.w3.org/2000/svg">
       <line x1="22" y1="46" x2="16" y2="28" stroke="white" strokeWidth="1.2" strokeLinecap="round"/>
@@ -28,7 +27,6 @@ function BouquetA() {
       <path d="M18 36 Q12 33 13 27 Q17 31 18 36Z" stroke="white" strokeWidth="1" fill="none" strokeLinecap="round"/>
       <path d="M26 36 Q32 33 31 27 Q27 31 26 36Z" stroke="white" strokeWidth="1" fill="none" strokeLinecap="round"/>
       <path d="M15 44 Q22 47 29 44" stroke="white" strokeWidth="1.2" fill="none" strokeLinecap="round"/>
-      {/* Daisy left */}
       <circle cx="11" cy="24" r="2" stroke="white" strokeWidth="1"/>
       <line x1="11" y1="20" x2="11" y2="18" stroke="white" strokeWidth="1" strokeLinecap="round"/>
       <line x1="11" y1="28" x2="11" y2="30" stroke="white" strokeWidth="1" strokeLinecap="round"/>
@@ -38,16 +36,13 @@ function BouquetA() {
       <line x1="13.8" y1="26.8" x2="15.2" y2="28.2" stroke="white" strokeWidth="1" strokeLinecap="round"/>
       <line x1="13.8" y1="21.2" x2="15.2" y2="19.8" stroke="white" strokeWidth="1" strokeLinecap="round"/>
       <line x1="8.2" y1="26.8" x2="6.8" y2="28.2" stroke="white" strokeWidth="1" strokeLinecap="round"/>
-      {/* Center rose */}
       <circle cx="22" cy="19" r="2.5" stroke="white" strokeWidth="1.1"/>
       <path d="M22 14 Q25 16 22 19 Q19 16 22 14Z" stroke="white" strokeWidth="1" fill="none"/>
       <path d="M17 17 Q19 14 22 16 Q20 19 17 17Z" stroke="white" strokeWidth="1" fill="none"/>
       <path d="M27 17 Q25 14 22 16 Q24 19 27 17Z" stroke="white" strokeWidth="1" fill="none"/>
-      {/* Tulip right */}
       <path d="M33 27 Q31 21 33 16 Q35 21 33 27Z" stroke="white" strokeWidth="1.1" fill="none" strokeLinecap="round"/>
       <path d="M33 27 Q30 22 30 17 Q32.5 21 33 27Z" stroke="white" strokeWidth="1.1" fill="none" strokeLinecap="round"/>
       <path d="M33 27 Q36 22 36 17 Q33.5 21 33 27Z" stroke="white" strokeWidth="1.1" fill="none" strokeLinecap="round"/>
-      {/* Buds */}
       <circle cx="16" cy="12" r="1.2" stroke="white" strokeWidth="0.9" fill="none"/>
       <line x1="16" y1="13.2" x2="16" y2="16" stroke="white" strokeWidth="0.9" strokeLinecap="round"/>
       <circle cx="28" cy="11" r="1.2" stroke="white" strokeWidth="0.9" fill="none"/>
@@ -57,7 +52,6 @@ function BouquetA() {
 }
 
 function BouquetB() {
-  // Compact, rounded — three flowers close together
   return (
     <svg width="44" height="52" viewBox="0 0 44 52" fill="none" xmlns="http://www.w3.org/2000/svg">
       <line x1="22" y1="46" x2="17" y2="30" stroke="white" strokeWidth="1.2" strokeLinecap="round"/>
@@ -68,26 +62,22 @@ function BouquetB() {
       <path d="M18 38 Q13 35 14 30 Q17 33 18 38Z" stroke="white" strokeWidth="1" fill="none"/>
       <path d="M26 38 Q31 35 30 30 Q27 33 26 38Z" stroke="white" strokeWidth="1" fill="none"/>
       <path d="M16 44 Q22 48 28 44" stroke="white" strokeWidth="1.2" fill="none" strokeLinecap="round"/>
-      {/* Left — poppy */}
       <circle cx="13" cy="26" r="1.8" stroke="white" strokeWidth="1"/>
       <path d="M13 22 Q16 23 16 26 Q13 27 13 22Z" stroke="white" strokeWidth="0.9" fill="none"/>
       <path d="M13 22 Q10 23 10 26 Q13 27 13 22Z" stroke="white" strokeWidth="0.9" fill="none"/>
       <path d="M9 26 Q10 23 13 23 Q13 26 9 26Z" stroke="white" strokeWidth="0.9" fill="none"/>
       <path d="M17 26 Q16 23 13 23 Q13 26 17 26Z" stroke="white" strokeWidth="0.9" fill="none"/>
-      {/* Center — full bloom */}
       <circle cx="22" cy="21" r="2.2" stroke="white" strokeWidth="1.1"/>
       <circle cx="22" cy="16.5" r="1.4" stroke="white" strokeWidth="1" fill="none"/>
       <circle cx="26" cy="18.5" r="1.4" stroke="white" strokeWidth="1" fill="none"/>
       <circle cx="18" cy="18.5" r="1.4" stroke="white" strokeWidth="1" fill="none"/>
       <circle cx="25.2" cy="23" r="1.4" stroke="white" strokeWidth="1" fill="none"/>
       <circle cx="18.8" cy="23" r="1.4" stroke="white" strokeWidth="1" fill="none"/>
-      {/* Right — anemone */}
       <circle cx="31" cy="26" r="1.8" stroke="white" strokeWidth="1"/>
       <path d="M31 22 Q34 23 34 26 Q31 27 31 22Z" stroke="white" strokeWidth="0.9" fill="none"/>
       <path d="M31 22 Q28 23 28 26 Q31 27 31 22Z" stroke="white" strokeWidth="0.9" fill="none"/>
       <path d="M27 26 Q28 23 31 23 Q31 26 27 26Z" stroke="white" strokeWidth="0.9" fill="none"/>
       <path d="M35 26 Q34 23 31 23 Q31 26 35 26Z" stroke="white" strokeWidth="0.9" fill="none"/>
-      {/* Buds */}
       <circle cx="17" cy="14" r="1" stroke="white" strokeWidth="0.9" fill="none"/>
       <line x1="17" y1="15" x2="17" y2="18" stroke="white" strokeWidth="0.9" strokeLinecap="round"/>
       <circle cx="27" cy="13" r="1" stroke="white" strokeWidth="0.9" fill="none"/>
@@ -97,7 +87,6 @@ function BouquetB() {
 }
 
 function BouquetC() {
-  // Tall and wild — grasses, wildflowers, sprawling
   return (
     <svg width="44" height="52" viewBox="0 0 44 52" fill="none" xmlns="http://www.w3.org/2000/svg">
       <line x1="22" y1="47" x2="14" y2="26" stroke="white" strokeWidth="1.2" strokeLinecap="round"/>
@@ -106,13 +95,11 @@ function BouquetC() {
       <line x1="22" y1="47" x2="30" y2="26" stroke="white" strokeWidth="1.2" strokeLinecap="round"/>
       <line x1="22" y1="47" x2="10" y2="30" stroke="white" strokeWidth="1.1" strokeLinecap="round"/>
       <line x1="22" y1="47" x2="34" y2="30" stroke="white" strokeWidth="1.1" strokeLinecap="round"/>
-      {/* Grass blades */}
       <path d="M14 26 Q12 20 10 15" stroke="white" strokeWidth="0.9" fill="none" strokeLinecap="round"/>
       <path d="M30 26 Q32 20 34 15" stroke="white" strokeWidth="0.9" fill="none" strokeLinecap="round"/>
       <path d="M18 36 Q13 33 14 28 Q17 31 18 36Z" stroke="white" strokeWidth="1" fill="none"/>
       <path d="M26 36 Q31 33 30 28 Q27 31 26 36Z" stroke="white" strokeWidth="1" fill="none"/>
       <path d="M15 45 Q22 49 29 45" stroke="white" strokeWidth="1.2" fill="none" strokeLinecap="round"/>
-      {/* Left wildflower */}
       <circle cx="10" cy="23" r="1.5" stroke="white" strokeWidth="1"/>
       <line x1="10" y1="20" x2="10" y2="18" stroke="white" strokeWidth="1" strokeLinecap="round"/>
       <line x1="10" y1="26" x2="10" y2="28" stroke="white" strokeWidth="1" strokeLinecap="round"/>
@@ -122,14 +109,12 @@ function BouquetC() {
       <line x1="12.1" y1="25.1" x2="13.5" y2="26.5" stroke="white" strokeWidth="1" strokeLinecap="round"/>
       <line x1="12.1" y1="20.9" x2="13.5" y2="19.5" stroke="white" strokeWidth="1" strokeLinecap="round"/>
       <line x1="7.9" y1="25.1" x2="6.5" y2="26.5" stroke="white" strokeWidth="1" strokeLinecap="round"/>
-      {/* Center tall flower */}
       <circle cx="22" cy="17" r="2.2" stroke="white" strokeWidth="1.1"/>
       <circle cx="22" cy="12.5" r="1.3" stroke="white" strokeWidth="1" fill="none"/>
       <circle cx="25.8" cy="14.3" r="1.3" stroke="white" strokeWidth="1" fill="none"/>
       <circle cx="18.2" cy="14.3" r="1.3" stroke="white" strokeWidth="1" fill="none"/>
       <circle cx="25" cy="19.5" r="1.3" stroke="white" strokeWidth="1" fill="none"/>
       <circle cx="19" cy="19.5" r="1.3" stroke="white" strokeWidth="1" fill="none"/>
-      {/* Right wildflower */}
       <circle cx="34" cy="23" r="1.5" stroke="white" strokeWidth="1"/>
       <line x1="34" y1="20" x2="34" y2="18" stroke="white" strokeWidth="1" strokeLinecap="round"/>
       <line x1="34" y1="26" x2="34" y2="28" stroke="white" strokeWidth="1" strokeLinecap="round"/>
@@ -139,7 +124,6 @@ function BouquetC() {
       <line x1="36.1" y1="25.1" x2="37.5" y2="26.5" stroke="white" strokeWidth="1" strokeLinecap="round"/>
       <line x1="36.1" y1="20.9" x2="37.5" y2="19.5" stroke="white" strokeWidth="1" strokeLinecap="round"/>
       <line x1="31.9" y1="25.1" x2="30.5" y2="26.5" stroke="white" strokeWidth="1" strokeLinecap="round"/>
-      {/* Small buds */}
       <circle cx="18" cy="9" r="1" stroke="white" strokeWidth="0.9" fill="none"/>
       <line x1="18" y1="10" x2="18" y2="13" stroke="white" strokeWidth="0.9" strokeLinecap="round"/>
       <circle cx="26" cy="8" r="1" stroke="white" strokeWidth="0.9" fill="none"/>
@@ -150,9 +134,33 @@ function BouquetC() {
 
 const BOUQUETS = [BouquetA, BouquetB, BouquetC];
 
-function BouquetLogo({ index }) {
-  const B = BOUQUETS[index % BOUQUETS.length];
-  return <B />;
+// ── Context toggle ────────────────────────────────────────────────────────────
+
+function ContextToggle({ on, onChange }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <span style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: on ? COLORS.ink : COLORS.muted }}>
+        context
+      </span>
+      <button
+        onClick={() => onChange(!on)}
+        style={{
+          width: 36, height: 20, borderRadius: 10, border: "none",
+          background: on ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.25)",
+          cursor: "pointer", position: "relative", transition: "background 0.25s ease",
+          padding: 0, flexShrink: 0,
+        }}
+      >
+        <div style={{
+          width: 14, height: 14, borderRadius: "50%",
+          background: on ? "#89c4e1" : "rgba(255,255,255,0.7)",
+          position: "absolute", top: 3,
+          left: on ? 19 : 3,
+          transition: "left 0.25s ease, background 0.25s ease",
+        }} />
+      </button>
+    </div>
+  );
 }
 
 // ── App ───────────────────────────────────────────────────────────────────────
@@ -163,7 +171,10 @@ export default function Posy() {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [contextOn, setContextOn] = useState(false);
   const [bouquetIndex] = useState(() => Math.floor(Math.random() * BOUQUETS.length));
+
+  const BouquetComponent = BOUQUETS[bouquetIndex];
 
   const discover = useCallback(async () => {
     setState("loading");
@@ -171,14 +182,14 @@ export default function Posy() {
     setImageLoaded(false);
     setImageError(false);
     try {
-      const art = await fetchArtwork();
+      const art = await fetchArtwork(contextOn);
       setArtwork(art);
       setState("loaded");
     } catch (e) {
       console.error(e);
       setState("error");
     }
-  }, []);
+  }, [contextOn]);
 
   return (
     <div style={{
@@ -197,23 +208,24 @@ export default function Posy() {
           borderBottom: `1px solid ${COLORS.faint}`, paddingBottom: 16,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <BouquetLogo index={bouquetIndex} />
+            <BouquetComponent />
             <div>
-              <span style={{
-                fontSize: 32, fontWeight: 400,
-                letterSpacing: "0.18em", textTransform: "uppercase",
-                lineHeight: 1,
-              }}>Posy</span>
+              <span style={{ fontSize: 32, fontWeight: 400, letterSpacing: "0.18em", textTransform: "uppercase", lineHeight: 1 }}>
+                Posy
+              </span>
               <span style={{ fontSize: 11, color: COLORS.muted, marginLeft: 14, letterSpacing: "0.1em" }}>
                 open collections
               </span>
             </div>
           </div>
-          <button onClick={() => setShowAbout(v => !v)} style={{
-            background: "transparent", border: "none", color: COLORS.muted,
-            fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
-            cursor: "pointer", fontFamily: "inherit", padding: 0,
-          }}>{showAbout ? "close" : "about"}</button>
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            <ContextToggle on={contextOn} onChange={setContextOn} />
+            <button onClick={() => setShowAbout(v => !v)} style={{
+              background: "transparent", border: "none", color: COLORS.muted,
+              fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
+              cursor: "pointer", fontFamily: "inherit", padding: 0,
+            }}>{showAbout ? "close" : "about"}</button>
+          </div>
         </div>
 
         {showAbout && (
@@ -224,7 +236,7 @@ export default function Posy() {
           }}>
             Posy draws from the Art Institute of Chicago, Rijksmuseum, and Metropolitan Museum
             of Art — hundreds of thousands of open-access works spanning every culture and era.
-            Images come directly from the museums. Context is written by Claude.
+            Images come directly from the museums. Turn on context for Claude's take.
           </div>
         )}
       </header>
@@ -247,7 +259,7 @@ export default function Posy() {
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: "14vh" }}>
             <Spinner />
             <p style={{ color: COLORS.muted, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", marginTop: 18 }}>
-              searching the archive
+              {contextOn ? "searching the archive" : "searching the archive"}
             </p>
           </div>
         )}
@@ -306,11 +318,16 @@ export default function Posy() {
               {artwork.medium && <span style={{ display: "block", fontStyle: "italic" }}>{artwork.medium}</span>}
             </div>
 
-            <div style={{ borderTop: `1px solid ${COLORS.faint}`, margin: "14px 0 18px" }} />
+            {contextOn && artwork.context && (
+              <>
+                <div style={{ borderTop: `1px solid ${COLORS.faint}`, margin: "14px 0 18px" }} />
+                <p style={{ fontSize: 15, lineHeight: 1.95, color: "rgba(255,255,255,0.85)", margin: "0 0 32px", fontStyle: "italic", animation: "fadeIn 0.4s ease" }}>
+                  {artwork.context}
+                </p>
+              </>
+            )}
 
-            <p style={{ fontSize: 15, lineHeight: 1.95, color: "rgba(255,255,255,0.85)", margin: "0 0 32px", fontStyle: "italic" }}>
-              {artwork.context}
-            </p>
+            <div style={{ borderTop: `1px solid ${COLORS.faint}`, margin: `${contextOn && artwork.context ? "0" : "14px"} 0 18px` }} />
 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
               {artwork.sourceUrl ? <LinkOut href={artwork.sourceUrl} label="view in collection ↗" /> : <span />}
