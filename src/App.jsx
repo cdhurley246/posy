@@ -1,9 +1,24 @@
 import { useState, useCallback } from "react";
 
-async function fetchArtwork(withContext) {
-  const res = await fetch(`/api/artwork?context=${withContext}`);
+async function fetchArtwork() {
+  const res = await fetch("/api/artwork?context=false");
   if (!res.ok) throw new Error(`Server error ${res.status}`);
   return res.json();
+}
+
+async function fetchContext(artwork) {
+  const res = await fetch("/api/artwork?context=true");
+  if (!res.ok) throw new Error(`Server error ${res.status}`);
+  // We only want the context for the current artwork, so we call a dedicated endpoint
+  // Instead, call Claude directly for context on the existing artwork
+  const claudeRes = await fetch("/api/context", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(artwork),
+  });
+  if (!claudeRes.ok) throw new Error(`Context error ${claudeRes.status}`);
+  const data = await claudeRes.json();
+  return data.context || "";
 }
 
 const COLORS = {
@@ -134,35 +149,6 @@ function BouquetC() {
 
 const BOUQUETS = [BouquetA, BouquetB, BouquetC];
 
-// ── Context toggle ────────────────────────────────────────────────────────────
-
-function ContextToggle({ on, onChange }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      <span style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: on ? COLORS.ink : COLORS.muted }}>
-        context
-      </span>
-      <button
-        onClick={() => onChange(!on)}
-        style={{
-          width: 36, height: 20, borderRadius: 10, border: "none",
-          background: on ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.25)",
-          cursor: "pointer", position: "relative", transition: "background 0.25s ease",
-          padding: 0, flexShrink: 0,
-        }}
-      >
-        <div style={{
-          width: 14, height: 14, borderRadius: "50%",
-          background: on ? "#89c4e1" : "rgba(255,255,255,0.7)",
-          position: "absolute", top: 3,
-          left: on ? 19 : 3,
-          transition: "left 0.25s ease, background 0.25s ease",
-        }} />
-      </button>
-    </div>
-  );
-}
-
 // ── App ───────────────────────────────────────────────────────────────────────
 
 export default function Posy() {
@@ -171,7 +157,8 @@ export default function Posy() {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
-  const [contextOn, setContextOn] = useState(false);
+  const [context, setContext] = useState("");
+  const [contextState, setContextState] = useState("idle"); // idle | loading | loaded
   const [bouquetIndex] = useState(() => Math.floor(Math.random() * BOUQUETS.length));
 
   const BouquetComponent = BOUQUETS[bouquetIndex];
@@ -181,15 +168,44 @@ export default function Posy() {
     setArtwork(null);
     setImageLoaded(false);
     setImageError(false);
+    setContext("");
+    setContextState("idle");
     try {
-      const art = await fetchArtwork(contextOn);
+      const art = await fetchArtwork();
       setArtwork(art);
       setState("loaded");
     } catch (e) {
       console.error(e);
       setState("error");
     }
-  }, [contextOn]);
+  }, []);
+
+  const tellMeMore = useCallback(async () => {
+    if (!artwork || contextState === "loading" || contextState === "loaded") return;
+    setContextState("loading");
+    try {
+      // Pass current artwork data to get context for THIS specific object
+      const res = await fetch("/api/context", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: artwork.title,
+          artist: artwork.artist,
+          date: artwork.date,
+          origin: artwork.origin,
+          medium: artwork.medium,
+          collection: artwork.collection,
+        }),
+      });
+      if (!res.ok) throw new Error("Context fetch failed");
+      const data = await res.json();
+      setContext(data.context || "");
+      setContextState("loaded");
+    } catch (e) {
+      console.error(e);
+      setContextState("idle");
+    }
+  }, [artwork, contextState]);
 
   return (
     <div style={{
@@ -218,14 +234,11 @@ export default function Posy() {
               </span>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            <ContextToggle on={contextOn} onChange={setContextOn} />
-            <button onClick={() => setShowAbout(v => !v)} style={{
-              background: "transparent", border: "none", color: COLORS.muted,
-              fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
-              cursor: "pointer", fontFamily: "inherit", padding: 0,
-            }}>{showAbout ? "close" : "about"}</button>
-          </div>
+          <button onClick={() => setShowAbout(v => !v)} style={{
+            background: "transparent", border: "none", color: COLORS.muted,
+            fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
+            cursor: "pointer", fontFamily: "inherit", padding: 0,
+          }}>{showAbout ? "close" : "about"}</button>
         </div>
 
         {showAbout && (
@@ -236,7 +249,7 @@ export default function Posy() {
           }}>
             Posy draws from the Art Institute of Chicago, Rijksmuseum, and Metropolitan Museum
             of Art — hundreds of thousands of open-access works spanning every culture and era.
-            Images come directly from the museums. Turn on context for Claude's take.
+            Images come directly from the museums. Hit "tell me more" for Claude's take.
           </div>
         )}
       </header>
@@ -259,7 +272,7 @@ export default function Posy() {
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: "14vh" }}>
             <Spinner />
             <p style={{ color: COLORS.muted, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", marginTop: 18 }}>
-              {contextOn ? "searching the archive" : "searching the archive"}
+              searching the archive
             </p>
           </div>
         )}
@@ -318,16 +331,47 @@ export default function Posy() {
               {artwork.medium && <span style={{ display: "block", fontStyle: "italic" }}>{artwork.medium}</span>}
             </div>
 
-            {contextOn && artwork.context && (
-              <>
-                <div style={{ borderTop: `1px solid ${COLORS.faint}`, margin: "14px 0 18px" }} />
-                <p style={{ fontSize: 15, lineHeight: 1.95, color: "rgba(255,255,255,0.85)", margin: "0 0 32px", fontStyle: "italic", animation: "fadeIn 0.4s ease" }}>
-                  {artwork.context}
-                </p>
-              </>
+            {/* Context area */}
+            {contextState === "idle" && (
+              <div style={{ marginBottom: 14 }}>
+                <button
+                  onClick={tellMeMore}
+                  style={{
+                    background: "transparent", border: "none",
+                    color: COLORS.muted, fontSize: 11,
+                    letterSpacing: "0.12em", textTransform: "uppercase",
+                    cursor: "pointer", fontFamily: "inherit", padding: 0,
+                    textDecoration: "none",
+                    borderBottom: "1px solid rgba(255,255,255,0.2)",
+                    paddingBottom: 1,
+                  }}
+                  onMouseEnter={e => e.target.style.color = "#ffffff"}
+                  onMouseLeave={e => e.target.style.color = COLORS.muted}
+                >
+                  tell me more
+                </button>
+              </div>
             )}
 
-            <div style={{ borderTop: `1px solid ${COLORS.faint}`, margin: `${contextOn && artwork.context ? "0" : "14px"} 0 18px` }} />
+            {contextState === "loading" && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                <Spinner small />
+                <span style={{ fontSize: 11, color: COLORS.muted, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                  thinking
+                </span>
+              </div>
+            )}
+
+            {contextState === "loaded" && context && (
+              <div style={{ animation: "fadeIn 0.5s ease", marginBottom: 14 }}>
+                <div style={{ borderTop: `1px solid ${COLORS.faint}`, margin: "0 0 18px" }} />
+                <p style={{ fontSize: 15, lineHeight: 1.95, color: "rgba(255,255,255,0.85)", margin: 0, fontStyle: "italic" }}>
+                  {context}
+                </p>
+              </div>
+            )}
+
+            <div style={{ borderTop: `1px solid ${COLORS.faint}`, margin: "18px 0" }} />
 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
               {artwork.sourceUrl ? <LinkOut href={artwork.sourceUrl} label="view in collection ↗" /> : <span />}
@@ -345,13 +389,15 @@ export default function Posy() {
   );
 }
 
-function Spinner() {
+function Spinner({ small }) {
+  const size = small ? 16 : 28;
   return (
     <div style={{
-      width: 28, height: 28,
+      width: size, height: size,
       border: "1px solid rgba(255,255,255,0.3)",
       borderTop: "1px solid rgba(255,255,255,0.9)",
       borderRadius: "50%", animation: "spin 1.4s linear infinite",
+      flexShrink: 0,
     }} />
   );
 }
