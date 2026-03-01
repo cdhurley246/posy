@@ -116,6 +116,9 @@ async function fetchMuseumObject() {
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 export default async function handler(req) {
+  const { searchParams } = new URL(req.url);
+  const withContext = searchParams.get("context") === "true";
+
   let artwork;
   try {
     artwork = await fetchMuseumObject();
@@ -123,26 +126,28 @@ export default async function handler(req) {
     return new Response(JSON.stringify({ error: e.message }), { status: 502 });
   }
 
-  const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": process.env.ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 300,
-      system: CONTEXT_SYSTEM,
-      messages: [{
-        role: "user",
-        content: `Title: ${artwork.title}\nArtist/maker: ${artwork.artist}\nDate: ${artwork.date}\nOrigin: ${artwork.origin}\nMedium: ${artwork.medium}\nCollection: ${artwork.collection}\n\nWrite vivid, surprising context for this object.`,
-      }],
-    }),
-  });
-
-  const anthropicData = await anthropicRes.json();
-  const context = anthropicData.content?.[0]?.text?.trim() || "";
+  let context = "";
+  if (withContext) {
+    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 300,
+        system: CONTEXT_SYSTEM,
+        messages: [{
+          role: "user",
+          content: `Title: ${artwork.title}\nArtist/maker: ${artwork.artist}\nDate: ${artwork.date}\nOrigin: ${artwork.origin}\nMedium: ${artwork.medium}\nCollection: ${artwork.collection}\n\nWrite vivid, surprising context for this object.`,
+        }],
+      }),
+    });
+    const anthropicData = await anthropicRes.json();
+    context = anthropicData.content?.[0]?.text?.trim() || "";
+  }
 
   return new Response(JSON.stringify({ ...artwork, context }), {
     status: 200,
