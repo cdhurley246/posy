@@ -235,8 +235,9 @@ export default function Posy() {
             fontSize: 13, color: COLORS.muted, lineHeight: 1.9,
             borderLeft: `2px solid ${COLORS.faint}`, animation: "fadeIn 0.25s ease",
           }}>
-            Posy draws from the Art Institute of Chicago, Rijksmuseum, and Metropolitan Museum
-            of Art — hundreds of thousands of open-access works spanning every culture and era.
+            Posy draws from the Art Institute of Chicago, Rijksmuseum, Metropolitan Museum of Art,
+            Victoria and Albert Museum, and Cleveland Museum of Art — hundreds of thousands of
+            open-access works spanning every culture and era.
             Images come directly from the museums. Hit "tell me more" for Claude's take.
           </div>
         )}

@@ -97,9 +97,74 @@ async function fetchMet() {
   };
 }
 
+// ── Victoria and Albert Museum ────────────────────────────────────────────────
+
+const VA_TYPES = [
+  "Painting", "Drawing", "Print", "Photograph", "Sculpture",
+  "Textile", "Ceramic", "Furniture", "Jewellery", "Poster",
+  "Metalwork", "Glass",
+];
+
+async function fetchVA() {
+  const type = VA_TYPES[Math.floor(Math.random() * VA_TYPES.length)];
+  const page = Math.floor(Math.random() * 30) + 1;
+  const url = `https://www.vam.ac.uk/api/v2/objects/search?kw_object_type=${encodeURIComponent(type)}&page=${page}&page_size=20&response_format=json`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`V&A ${res.status}`);
+  const data = await res.json();
+  const items = (data.records || []).filter(o => o._images?._iiif_image_base_url && o._primaryImageId);
+  if (!items.length) throw new Error("V&A no results");
+  const obj = items[Math.floor(Math.random() * items.length)];
+  const imageUrl = `${obj._images._iiif_image_base_url}full/1000,/0/default.jpg`;
+  return {
+    title: obj._primaryTitle || "Untitled",
+    artist: obj._primaryMaker?.name || "",
+    date: obj._primaryDate || "",
+    origin: obj._primaryPlace || "",
+    medium: obj.objectType || type,
+    collection: "Victoria and Albert Museum",
+    department: obj.objectType || type,
+    imageUrl,
+    sourceUrl: `https://www.vam.ac.uk/item/${obj.systemNumber}`,
+  };
+}
+
+// ── Cleveland Museum of Art ───────────────────────────────────────────────────
+
+const CMA_DEPARTMENTS = [
+  "African Art", "American Paintings and Sculpture", "Asian Art",
+  "Chinese Art", "Contemporary Art", "Egyptian and Ancient Near Eastern Art",
+  "European Paintings and Sculpture", "Greek and Roman Art", "Indian and Southeast Asian Art",
+  "Japanese Art", "Medieval Art", "Modern European Painting and Sculpture",
+  "Photography", "Prints and Drawings", "Textiles",
+];
+
+async function fetchCleveland() {
+  const dept = CMA_DEPARTMENTS[Math.floor(Math.random() * CMA_DEPARTMENTS.length)];
+  const skip = Math.floor(Math.random() * 500);
+  const url = `https://openaccess-api.clevelandart.org/api/artworks/?has_image=1&cc0=true&department=${encodeURIComponent(dept)}&skip=${skip}&limit=20`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Cleveland ${res.status}`);
+  const data = await res.json();
+  const items = (data.data || []).filter(o => o.images?.web?.url);
+  if (!items.length) throw new Error("Cleveland no results");
+  const obj = items[Math.floor(Math.random() * items.length)];
+  return {
+    title: obj.title || "Untitled",
+    artist: obj.creators?.[0]?.description || "",
+    date: obj.creation_date || "",
+    origin: "",
+    medium: obj.technique || obj.type || "",
+    collection: "Cleveland Museum of Art",
+    department: obj.department || dept,
+    imageUrl: obj.images.web.url,
+    sourceUrl: obj.url || "",
+  };
+}
+
 // ── Fetch with retries ────────────────────────────────────────────────────────
 
-const FETCHERS = [fetchAIC, fetchAIC, fetchRijks, fetchMet];
+const FETCHERS = [fetchAIC, fetchAIC, fetchRijks, fetchMet, fetchVA, fetchCleveland];
 
 async function fetchMuseumObject() {
   const shuffled = [...FETCHERS];
