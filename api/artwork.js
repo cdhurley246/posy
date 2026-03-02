@@ -162,9 +162,95 @@ async function fetchCleveland() {
   };
 }
 
+// ── Wellcome Collection ───────────────────────────────────────────────────────
+
+async function fetchWellcome() {
+  const page = Math.floor(Math.random() * 400) + 1;
+  const url = `https://api.wellcomecollection.org/catalogue/v2/images?pageSize=20&page=${page}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Wellcome ${res.status}`);
+  const data = await res.json();
+  const items = (data.results || []).filter(o => o.thumbnail?.url);
+  if (!items.length) throw new Error("Wellcome no results");
+  const obj = items[Math.floor(Math.random() * items.length)];
+  const match = obj.thumbnail.url.match(/\/image\/([^/]+)/);
+  if (!match) throw new Error("Wellcome no image ID");
+  const imageUrl = `https://iiif.wellcomecollection.org/image/${match[1]}/full/1000,/0/default.jpg`;
+  return {
+    title: obj.source?.title || "Untitled",
+    artist: obj.source?.contributors?.[0]?.agent?.label || "",
+    date: "",
+    origin: "",
+    medium: "",
+    collection: "Wellcome Collection",
+    department: "",
+    imageUrl,
+    sourceUrl: `https://wellcomecollection.org/works/${obj.source?.id}`,
+  };
+}
+
+// ── NASA Image and Video Library ──────────────────────────────────────────────
+
+const NASA_QUERIES = [
+  "nebula", "galaxy", "earth", "mars", "moon", "astronaut",
+  "hubble", "aurora", "solar flare", "saturn", "jupiter",
+  "apollo", "supernova", "comet", "space station", "rocket",
+];
+
+async function fetchNASA() {
+  const q = NASA_QUERIES[Math.floor(Math.random() * NASA_QUERIES.length)];
+  const page = Math.floor(Math.random() * 10) + 1;
+  const url = `https://images-api.nasa.gov/search?q=${encodeURIComponent(q)}&media_type=image&page=${page}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`NASA ${res.status}`);
+  const data = await res.json();
+  const items = (data.collection?.items || []).filter(o => o.links?.[0]?.href && o.data?.[0]);
+  if (!items.length) throw new Error("NASA no results");
+  const obj = items[Math.floor(Math.random() * items.length)];
+  const meta = obj.data[0];
+  return {
+    title: meta.title || "Untitled",
+    artist: meta.secondary_creator || meta.center || "",
+    date: meta.date_created ? meta.date_created.slice(0, 4) : "",
+    origin: meta.center || "",
+    medium: "Photography",
+    collection: "NASA Image and Video Library",
+    department: meta.center || "",
+    imageUrl: obj.links[0].href,
+    sourceUrl: `https://images.nasa.gov/details/${meta.nasa_id}`,
+  };
+}
+
+// ── Library of Congress ───────────────────────────────────────────────────────
+
+async function fetchLOC() {
+  const page = Math.floor(Math.random() * 100) + 1;
+  const url = `https://www.loc.gov/photos/?fo=json&sp=${page}&c=20`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`LOC ${res.status}`);
+  const data = await res.json();
+  const items = (data.results || []).filter(o => o.service_medium || o.image_url?.length);
+  if (!items.length) throw new Error("LOC no results");
+  const obj = items[Math.floor(Math.random() * items.length)];
+  const lastUrl = obj.image_url?.[obj.image_url.length - 1] || "";
+  const imageUrl = obj.service_medium || lastUrl.split("#")[0];
+  if (!imageUrl) throw new Error("LOC no image");
+  return {
+    title: obj.title || "Untitled",
+    artist: obj.creators?.[0]?.title || "",
+    date: obj.date || "",
+    origin: "United States",
+    medium: obj.format?.[0] || "",
+    collection: "Library of Congress",
+    department: "",
+    imageUrl,
+    sourceUrl: obj.url || "",
+  };
+}
+
 // ── Fetch with retries ────────────────────────────────────────────────────────
 
-const FETCHERS = [fetchAIC, fetchAIC, fetchRijks, fetchMet, fetchVA, fetchCleveland];
+const FETCHERS = [fetchAIC, fetchAIC, fetchRijks, fetchMet, fetchVA, fetchCleveland, fetchWellcome, fetchNASA, fetchLOC];
 
 async function fetchMuseumObject() {
   const shuffled = [...FETCHERS];
