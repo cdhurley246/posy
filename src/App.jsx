@@ -182,11 +182,11 @@ export default function Posy() {
           collection: artwork.collection,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        console.error("Context API error:", data.detail || data.error);
-        throw new Error(data.detail || data.error || "Context fetch failed");
-      }
+      const rawText = await res.text();
+      console.log("Context API raw response:", res.status, rawText);
+      let data;
+      try { data = JSON.parse(rawText); } catch { throw new Error(`Non-JSON response (${res.status}): ${rawText.slice(0, 300)}`); }
+      if (!res.ok) throw new Error(data.detail || data.error || `HTTP ${res.status}`);
       setContext(data.context || "");
       setContextState("loaded");
     } catch (e) {
