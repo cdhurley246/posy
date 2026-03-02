@@ -6,21 +6,6 @@ async function fetchArtwork() {
   return res.json();
 }
 
-async function fetchContext(artwork) {
-  const res = await fetch("/api/artwork?context=true");
-  if (!res.ok) throw new Error(`Server error ${res.status}`);
-  // We only want the context for the current artwork, so we call a dedicated endpoint
-  // Instead, call Claude directly for context on the existing artwork
-  const claudeRes = await fetch("/api/context", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(artwork),
-  });
-  if (!claudeRes.ok) throw new Error(`Context error ${claudeRes.status}`);
-  const data = await claudeRes.json();
-  return data.context || "";
-}
-
 const COLORS = {
   bg: "#89c4e1",
   ink: "#ffffff",

@@ -47,7 +47,7 @@ const RIJKS_TYPES = [
 async function fetchRijks() {
   const type = RIJKS_TYPES[Math.floor(Math.random() * RIJKS_TYPES.length)];
   const page = Math.floor(Math.random() * 30) + 1;
-  const url = `https://www.rijksmuseum.nl/api/en/collection?key=0fiuZFh4&type=${type}&imgonly=True&ps=10&p=${page}&s=relevance`;
+  const url = `https://www.rijksmuseum.nl/api/en/collection?key=${process.env.RIJKSMUSEUM_API_KEY}&type=${type}&imgonly=True&ps=10&p=${page}&s=relevance`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Rijks ${res.status}`);
   const data = await res.json();
@@ -102,7 +102,11 @@ async function fetchMet() {
 const FETCHERS = [fetchAIC, fetchAIC, fetchRijks, fetchMet];
 
 async function fetchMuseumObject() {
-  const shuffled = [...FETCHERS].sort(() => Math.random() - 0.5);
+  const shuffled = [...FETCHERS];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
   for (const fetcher of shuffled) {
     try {
       return await fetcher();
@@ -145,8 +149,12 @@ export default async function handler(req) {
         }],
       }),
     });
-    const anthropicData = await anthropicRes.json();
-    context = anthropicData.content?.[0]?.text?.trim() || "";
+    if (!anthropicRes.ok) {
+      console.error("Anthropic error:", anthropicRes.status, await anthropicRes.text());
+    } else {
+      const anthropicData = await anthropicRes.json();
+      context = anthropicData.content?.[0]?.text?.trim() || "";
+    }
   }
 
   return new Response(JSON.stringify({ ...artwork, context }), {
