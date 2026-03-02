@@ -143,7 +143,7 @@ export default function Posy() {
   const [imageError, setImageError] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [context, setContext] = useState("");
-  const [contextState, setContextState] = useState("idle"); // idle | loading | loaded
+  const [contextState, setContextState] = useState("idle"); // idle | loading | loaded | error
   const [bouquetIndex] = useState(() => Math.floor(Math.random() * BOUQUETS.length));
 
   const BouquetComponent = BOUQUETS[bouquetIndex];
@@ -188,7 +188,7 @@ export default function Posy() {
       setContextState("loaded");
     } catch (e) {
       console.error(e);
-      setContextState("idle");
+      setContextState("error");
     }
   }, [artwork, contextState]);
 
@@ -344,6 +344,25 @@ export default function Posy() {
                 <span style={{ fontSize: 11, color: COLORS.muted, letterSpacing: "0.1em", textTransform: "uppercase" }}>
                   thinking
                 </span>
+              </div>
+            )}
+
+            {contextState === "error" && (
+              <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 12, color: COLORS.muted, fontStyle: "italic" }}>
+                  Couldn't load context —
+                </span>
+                <button
+                  onClick={() => { setContextState("idle"); tellMeMore(); }}
+                  style={{
+                    background: "transparent", border: "none", color: COLORS.muted,
+                    fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
+                    cursor: "pointer", fontFamily: "inherit", padding: 0,
+                    borderBottom: "1px solid rgba(255,255,255,0.2)", paddingBottom: 1,
+                  }}
+                >
+                  try again
+                </button>
               </div>
             )}
 
