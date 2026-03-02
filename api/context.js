@@ -43,7 +43,7 @@ export default async function handler(req) {
   if (!anthropicRes.ok) {
     const errText = await anthropicRes.text();
     console.error("Anthropic error:", anthropicRes.status, errText);
-    return new Response(JSON.stringify({ error: "Context generation failed" }), {
+    return new Response(JSON.stringify({ error: "Context generation failed", detail: `${anthropicRes.status}: ${errText}` }), {
       status: 502,
       headers: { "Content-Type": "application/json" },
     });

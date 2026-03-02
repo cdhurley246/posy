@@ -182,12 +182,15 @@ export default function Posy() {
           collection: artwork.collection,
         }),
       });
-      if (!res.ok) throw new Error("Context fetch failed");
       const data = await res.json();
+      if (!res.ok) {
+        console.error("Context API error:", data.detail || data.error);
+        throw new Error(data.detail || data.error || "Context fetch failed");
+      }
       setContext(data.context || "");
       setContextState("loaded");
     } catch (e) {
-      console.error(e);
+      console.error("tellMeMore failed:", e.message);
       setContextState("error");
     }
   }, [artwork, contextState]);
