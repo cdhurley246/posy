@@ -97,7 +97,7 @@ async function fetchMet() {
   };
 }
 
-// ── Smithsonian Freer Gallery (Supabase) ──────────────────────────────────────
+// ── Smithsonian (Supabase) ────────────────────────────────────────────────────
 
 const SUPABASE_URL = "https://ogyfmotdvxwdskbyudky.supabase.co";
 const SUPABASE_ANON_KEY =
@@ -105,7 +105,10 @@ const SUPABASE_ANON_KEY =
   ".eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9neWZtb3Rkdnh3ZHNrYnl1ZGt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0OTE4MzgsImV4cCI6MjA4ODA2NzgzOH0" +
   ".kXbgNkWQRu27uvGZs8QrOJ_OAM330SNydjR2UoooX4g";
 
-async function fetchSmithsonianFSG() {
+const CREATOR_LABELS = ["Artist", "Designer", "Maker", "Architect", "Author",
+  "Manufacturer", "Photographer", "Craftsman", "Sculptor"];
+
+async function fetchSupabase() {
   const headers = {
     apikey: SUPABASE_ANON_KEY,
     Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
@@ -131,10 +134,11 @@ async function fetchSmithsonianFSG() {
 
   const row = rows[0];
 
-  // Pull artist name out of raw_metadata if present
+  // Pull creator name from raw_metadata — check multiple label types
   const freetext = row.raw_metadata?.content?.freetext || {};
-  const artist =
-    (freetext.name || []).find((n) => n.label === "Artist")?.content || "";
+  const nameEntries = freetext.name || [];
+  const creatorEntry = nameEntries.find((n) => CREATOR_LABELS.includes(n.label));
+  const artist = creatorEntry?.content || "";
 
   return {
     title: row.title || "Untitled",
@@ -142,7 +146,7 @@ async function fetchSmithsonianFSG() {
     date: row.date_created || "",
     origin: row.culture_region || "",
     medium: row.medium || "",
-    collection: "Smithsonian — Freer Gallery",
+    collection: row.source_institution || "Smithsonian",
     department: row.source_category || "",
     imageUrl: row.image_url,
     sourceUrl: row.source_url || "",
@@ -151,7 +155,7 @@ async function fetchSmithsonianFSG() {
 
 // ── Fetch with retries ────────────────────────────────────────────────────────
 
-const FETCHERS = [fetchAIC, fetchAIC, fetchRijks, fetchMet, fetchSmithsonianFSG, fetchSmithsonianFSG];
+const FETCHERS = [fetchAIC, fetchAIC, fetchRijks, fetchMet, fetchSupabase, fetchSupabase];
 
 async function fetchMuseumObject() {
   const shuffled = [...FETCHERS].sort(() => Math.random() - 0.5);

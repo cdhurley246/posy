@@ -248,9 +248,9 @@ export default function Posy() {
             borderLeft: `2px solid ${COLORS.faint}`, animation: "fadeIn 0.25s ease",
           }}>
             Posy draws from the Art Institute of Chicago, Rijksmuseum, Metropolitan Museum
-            of Art, and the Smithsonian's Freer Gallery — hundreds of thousands of open-access
-            works spanning every culture and era. Images come directly from the museums.
-            Hit "tell me more" for Claude's take.
+            of Art, and the Smithsonian's Freer Gallery and Cooper Hewitt Design Museum —
+            hundreds of thousands of open-access works spanning every culture and era.
+            Images come directly from the museums. Hit "tell me more" for Claude's take.
           </div>
         )}
       </header>
