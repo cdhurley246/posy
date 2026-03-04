@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh auth status)",
+      "Bash(brew install gh)",
+      "Bash(gh --version)",
+      "WebFetch(domain:iaddb.org)",
+      "Bash(/opt/homebrew/bin/vercel --version)",
+      "Bash(git add api/context.js src/App.jsx)",
+      "Bash(git commit:*)",
+      "Bash(git push origin main)",
+      "Bash(ls /Users/carterhurley/posy/.env*)",
+      "Bash(git add src/App.jsx)",
+      "WebFetch(domain:developers.vam.ac.uk)",
+      "WebFetch(domain:openaccess-api.clevelandart.org)",
+      "WebFetch(domain:www.vam.ac.uk)",
+      "WebFetch(domain:api.vam.ac.uk)",
+      "Bash(git add api/artwork.js src/App.jsx)",
+      "WebFetch(domain:developers.wellcomecollection.org)",
+      "WebFetch(domain:images-api.nasa.gov)",
+      "WebFetch(domain:www.loc.gov)",
+      "WebFetch(domain:api.wellcomecollection.org)",
+      "WebFetch(domain:www.biodiversitylibrary.org)",
+      "Bash(curl -s \"https://smithsonian-open-access.s3-us-west-2.amazonaws.com/metadata/edan/index.txt\")",
+      "Bash(curl -s \"https://smithsonian-open-access.s3-us-west-2.amazonaws.com/metadata/edan/fsg/index.txt\")",
+      "Bash(curl -s \"https://smithsonian-open-access.s3-us-west-2.amazonaws.com/metadata/edan/fsg/00.txt\")",
+      "Bash(node --version)",
+      "Bash(python3 -c \"import urllib.request, json, sys; print\\(''stdlib ok''\\)\")",
+      "Bash(python3 scripts/ingest_smithsonian.py)",
+      "Bash(python3 /Users/carterhurley/Downloads/posy-main/scripts/ingest_smithsonian.py)",
+      "Bash(git init)",
+      "Bash(git add -A)"
+    ]
+  }
+}
