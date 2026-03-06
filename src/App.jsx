@@ -348,10 +348,17 @@ export default function Posy() {
             display: "flex", flexDirection: "column", alignItems: "center",
             paddingTop: "14vh", animation: "fadeIn 0.8s ease",
           }}>
-            <p style={{ fontSize: 15, color: COLORS.muted, marginBottom: 32, fontStyle: "italic" }}>
+            <p style={{
+              fontSize: "clamp(20px, 3.5vw, 28px)",
+              color: "rgba(255,255,255,0.88)",
+              marginBottom: 48,
+              fontStyle: "italic",
+              textAlign: "center",
+              lineHeight: 1.5,
+            }}>
               Something from the archive, for you.
             </p>
-            <PosyButton onClick={discover} label="see something" />
+            <PosyButton onClick={discover} label="see something" large />
           </div>
         )}
 
@@ -591,8 +598,10 @@ function Spinner({ small }) {
   );
 }
 
-function PosyButton({ onClick, label, small }) {
+function PosyButton({ onClick, label, small, large }) {
   const [hovered, setHovered] = useState(false);
+  const padding  = large ? "22px 72px"  : small ? "8px 22px"  : "14px 44px";
+  const fontSize = large ? 15           : small ? 11           : 12;
   return (
     <button onClick={onClick}
       onMouseEnter={() => setHovered(true)}
@@ -601,8 +610,8 @@ function PosyButton({ onClick, label, small }) {
         background: hovered ? "rgba(255,255,255,0.2)" : "transparent",
         border: `1px solid rgba(255,255,255,${hovered ? "0.9" : "0.6"})`,
         color: "#ffffff",
-        padding: small ? "8px 22px" : "14px 44px",
-        fontSize: small ? 11 : 12,
+        padding,
+        fontSize,
         letterSpacing: "0.18em", textTransform: "uppercase",
         cursor: "pointer", transition: "all 0.22s ease", fontFamily: "inherit",
       }}
