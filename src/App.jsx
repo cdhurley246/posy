@@ -1,7 +1,12 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
+import FilterBar from "./FilterBar.jsx";
 
-async function fetchArtwork() {
-  const res = await fetch("/api/artwork?context=false");
+async function fetchArtwork(filters = {}) {
+  const params = new URLSearchParams({ context: "false" });
+  if (filters.source)  params.set("source",  filters.source);
+  if (filters.era)     params.set("era",      filters.era);
+  if (filters.culture) params.set("culture",  filters.culture);
+  const res = await fetch(`/api/artwork?${params}`);
   if (!res.ok) throw new Error(`Server error ${res.status}`);
   return res.json();
 }
@@ -151,6 +156,8 @@ const BOUQUETS = [BouquetA, BouquetB, BouquetC];
 
 // ── App ───────────────────────────────────────────────────────────────────────
 
+const LIVE_SOURCES = ["met", "rijks", "aic", "europeana", "loc"];
+
 export default function Posy() {
   const [state, setState] = useState("idle");
   const [artwork, setArtwork] = useState(null);
@@ -161,9 +168,17 @@ export default function Posy() {
   const [contextState, setContextState] = useState("idle"); // idle | loading | loaded
   const [bouquetIndex] = useState(() => Math.floor(Math.random() * BOUQUETS.length));
 
+  // Filter state — null means "All" (no filter active)
+  const [filters, setFilters] = useState({ source: null, era: null, culture: null });
+  // Ref so discover() always reads the latest filters without being in its dep array
+  const filtersRef = useRef({ source: null, era: null, culture: null });
+
   const BouquetComponent = BOUQUETS[bouquetIndex];
 
-  const discover = useCallback(async () => {
+  // discover() accepts an optional filtersOverride so filter changes can pass fresh
+  // values immediately (setState is async; the ref is updated synchronously before calling).
+  const discover = useCallback(async (filtersOverride) => {
+    const activeFilters = filtersOverride !== undefined ? filtersOverride : filtersRef.current;
     setState("loading");
     setArtwork(null);
     setImageLoaded(false);
@@ -171,14 +186,31 @@ export default function Posy() {
     setContext("");
     setContextState("idle");
     try {
-      const art = await fetchArtwork();
+      const art = await fetchArtwork(activeFilters);
+      if (art.empty) {
+        setState("no_results");
+        return;
+      }
       setArtwork(art);
       setState("loaded");
     } catch (e) {
       console.error(e);
       setState("error");
     }
-  }, []);
+  }, []); // stable — reads filters via ref
+
+  // Called by FilterBar. Handles the live-source rule (auto-clears era/culture),
+  // syncs the ref, and triggers a re-fetch if we're not in the initial idle state.
+  function handleFiltersChange(newFilters) {
+    const cleaned = LIVE_SOURCES.includes(newFilters.source)
+      ? { ...newFilters, era: null, culture: null }
+      : newFilters;
+    filtersRef.current = cleaned;
+    setFilters(cleaned);
+    if (state !== "idle") {
+      discover(cleaned);
+    }
+  }
 
   const tellMeMore = useCallback(async () => {
     if (!artwork || contextState === "loading" || contextState === "loaded") return;
@@ -255,6 +287,11 @@ export default function Posy() {
         )}
       </header>
 
+      {/* Filter bar — always visible below the header */}
+      <div style={{ width: "100%", maxWidth: 720, padding: "0 32px" }}>
+        <FilterBar filters={filters} onChange={handleFiltersChange} />
+      </div>
+
       <main style={{ width: "100%", maxWidth: 720, padding: "0 32px", flex: 1 }}>
 
         {state === "idle" && (
@@ -284,6 +321,18 @@ export default function Posy() {
               Couldn't reach the archive.
             </p>
             <PosyButton onClick={discover} label="see something" />
+          </div>
+        )}
+
+        {state === "no_results" && (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: "14vh" }}>
+            <p style={{ color: COLORS.muted, marginBottom: 6, fontSize: 14, fontStyle: "italic", textAlign: "center" }}>
+              Nothing in the archive matches these filters.
+            </p>
+            <p style={{ color: COLORS.muted, marginBottom: 28, fontSize: 11, letterSpacing: "0.06em", opacity: 0.7, textAlign: "center" }}>
+              Try widening the era or region.
+            </p>
+            <PosyButton onClick={() => discover()} label="try again" />
           </div>
         )}
 

@@ -105,9 +105,6 @@ const SUPABASE_ANON_KEY =
   ".eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9neWZtb3Rkdnh3ZHNrYnl1ZGt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0OTE4MzgsImV4cCI6MjA4ODA2NzgzOH0" +
   ".kXbgNkWQRu27uvGZs8QrOJ_OAM330SNydjR2UoooX4g";
 
-const CREATOR_LABELS = ["Artist", "Designer", "Maker", "Architect", "Author",
-  "Manufacturer", "Photographer", "Craftsman", "Sculptor"];
-
 async function fetchSupabase() {
   const headers = {
     apikey: SUPABASE_ANON_KEY,
@@ -133,29 +130,186 @@ async function fetchSupabase() {
   if (!rows.length) throw new Error("Supabase: no rows (check RLS SELECT policy)");
 
   const row = rows[0];
-
-  // Pull creator name from raw_metadata — check multiple label types
-  const freetext = row.raw_metadata?.content?.freetext || {};
-  const nameEntries = freetext.name || [];
-  const creatorEntry = nameEntries.find((n) => CREATOR_LABELS.includes(n.label));
-  const artist = creatorEntry?.content || "";
+  if (!row.image_url) throw new Error("Supabase: row has no image_url");
 
   return {
-    title: row.title || "Untitled",
-    artist,
-    date: row.date_created || "",
-    origin: row.culture_region || "",
-    medium: row.medium || "",
-    collection: row.source_institution || "Smithsonian",
+    title:      row.title || "Untitled",
+    artist:     "",                          // creator not stored as a dedicated column
+    date:       row.date_created || "",
+    origin:     row.culture_region || "",
+    medium:     row.medium || "",
+    collection: row.source_institution || "",
     department: row.source_category || "",
-    imageUrl: row.image_url,
-    sourceUrl: row.source_url || "",
+    imageUrl:   row.image_url,
+    sourceUrl:  row.source_url || "",
+  };
+}
+
+// ── Filtered Supabase query ───────────────────────────────────────────────────
+
+const CULTURE_PATTERNS = {
+  france: "*France*",
+  italy:  "*Italy*",
+  usa:    "*USA*",
+  china:  "*China*",
+  japan:  "*Japan*",
+  europe: "*Europe*",
+};
+
+async function fetchSupabaseFiltered({ source, era, culture } = {}) {
+  const headers = {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+  };
+
+  // Build PostgREST filter clauses as raw query-string segments
+  const parts = [];
+
+  if (source === "smithsonian") parts.push("source_institution=ilike.*Smithsonian*");
+  if (source === "bhl")         parts.push("source_institution=ilike.*Biodiversity*");
+
+  // Era: best-effort text comparison — works for pure-year strings (e.g. "1727"),
+  // also works for range-start strings like "1771–1802" due to lexicographic ordering.
+  if (era === "before-1500") { parts.push("date_created=lt.1500"); }
+  if (era === "1500-1800")   { parts.push("date_created=gte.1500"); parts.push("date_created=lt.1800"); }
+  if (era === "1800-1900")   { parts.push("date_created=gte.1800"); parts.push("date_created=lt.1900"); }
+  if (era === "1900-1950")   { parts.push("date_created=gte.1900"); parts.push("date_created=lt.1950"); }
+  if (era === "after-1950")  { parts.push("date_created=gte.1950"); }
+
+  if (culture && CULTURE_PATTERNS[culture]) {
+    // PostgREST ilike: column=ilike.*Pattern* — the * is the glob wildcard
+    parts.push(`culture_region=ilike.${CULTURE_PATTERNS[culture]}`);
+  }
+
+  const qs = parts.length ? `&${parts.join("&")}` : "";
+
+  // 1. Count matching rows for random-offset selection
+  const countRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/images?select=id${qs}`,
+    { headers: { ...headers, Prefer: "count=exact", "Range-Unit": "items", Range: "0-0" } },
+  );
+  if (!countRes.ok) throw new Error(`Supabase filter count ${countRes.status}`);
+  const cr    = countRes.headers.get("Content-Range") || "";
+  const total = parseInt(cr.split("/")[1]) || 0;
+  if (total === 0) throw new Error("EMPTY_FILTER");
+
+  // 2. Fetch one random row within the filtered set
+  const offset = Math.floor(Math.random() * total);
+  const rowRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/images?select=*${qs}&limit=1&offset=${offset}`,
+    { headers },
+  );
+  if (!rowRes.ok) throw new Error(`Supabase filtered fetch ${rowRes.status}`);
+  const rows = await rowRes.json();
+  if (!rows.length || !rows[0].image_url) throw new Error("EMPTY_FILTER");
+
+  const row = rows[0];
+  return {
+    title:      row.title || "Untitled",
+    artist:     "",
+    date:       row.date_created || "",
+    origin:     row.culture_region || "",
+    medium:     row.medium || "",
+    collection: row.source_institution || "",
+    department: row.source_category || "",
+    imageUrl:   row.image_url,
+    sourceUrl:  row.source_url || "",
+  };
+}
+
+// ── Library of Congress ───────────────────────────────────────────────────────
+
+const LOC_COLLECTIONS = [
+  { slug: "works-progress-administration-posters", label: "WPA Posters",             maxPages: 38 },
+  { slug: "world-war-i-posters",                   label: "World War I Posters",     maxPages: 75 },
+  { slug: "yanker-posters",                        label: "Yanker Poster Collection", maxPages: 47 },
+];
+
+async function fetchLOC() {
+  const coll = LOC_COLLECTIONS[Math.floor(Math.random() * LOC_COLLECTIONS.length)];
+  const page = Math.floor(Math.random() * coll.maxPages) + 1;
+  const url = `https://www.loc.gov/collections/${coll.slug}/?fo=json&c=25&sp=${page}`;
+  const res = await fetch(url, { headers: { Accept: "application/json" } });
+  if (!res.ok) throw new Error(`LOC ${res.status}`);
+  const data = await res.json();
+
+  const results = (data.results || []).filter(r => (r.image_url || []).length > 0);
+  if (!results.length) throw new Error("LOC: no items with images on this page");
+
+  const obj = results[Math.floor(Math.random() * results.length)];
+
+  // Take the largest image (last entry), strip the #h=...&w=... fragment.
+  // If we only got a _150px thumbnail, upgrade to the medium-res r.jpg (~640px).
+  let imageUrl = obj.image_url[obj.image_url.length - 1].split("#")[0];
+  if (imageUrl.includes("_150px.")) {
+    imageUrl = imageUrl.replace(/_150px\.[^.]+$/, "r.jpg");
+  }
+
+  // contributor is an array of creator strings
+  const artist = Array.isArray(obj.contributor)
+    ? obj.contributor[0] || ""
+    : (obj.contributor || "");
+
+  // date is an ISO string like "1941-01-01" — show just the year
+  const date = obj.date ? obj.date.slice(0, 4) : "";
+
+  const medium = Array.isArray(obj.original_format)
+    ? obj.original_format[0]
+    : (obj.original_format || "poster");
+
+  return {
+    title:      (typeof obj.title === "string" ? obj.title : (obj.title || []).join("")) || "Untitled",
+    artist,
+    date,
+    origin:     "United States",
+    medium,
+    collection: "Library of Congress",
+    department: coll.label,
+    imageUrl,
+    sourceUrl:  typeof obj.id === "string" ? obj.id : "",
+  };
+}
+
+// ── Europeana (Finnish collections) ──────────────────────────────────────────
+
+async function fetchEuropeana() {
+  const EUROPEANA_KEY = process.env.EUROPEANA_API_KEY || "api2demo";
+  const params = new URLSearchParams({
+    wskey: EUROPEANA_KEY,
+    query: "*",
+    reusability: "open",
+    sort: "random",
+    rows: "20",
+    profile: "rich",
+  });
+  params.append("qf", "COUNTRY:finland");
+  params.append("qf", "TYPE:IMAGE");
+
+  const res = await fetch(`https://api.europeana.eu/record/v2/search.json?${params}`);
+  if (!res.ok) throw new Error(`Europeana ${res.status}`);
+  const data = await res.json();
+
+  const first = (arr) => (Array.isArray(arr) && arr.length > 0) ? arr[0] : "";
+  const items = (data.items || []).filter(item => first(item.edmIsShownBy));
+  if (!items.length) throw new Error("Europeana: no items with images");
+
+  const obj = items[Math.floor(Math.random() * items.length)];
+  return {
+    title:      first(obj.title) || "Untitled",
+    artist:     first(obj.dcCreator) || "",
+    date:       first(obj.year) || "",
+    origin:     "Finland",
+    medium:     first(obj.dcFormat) || first(obj.dcType) || "",
+    collection: first(obj.dataProvider) || "Europeana",
+    department: first(obj.dataProvider) || "",
+    imageUrl:   first(obj.edmIsShownBy),
+    sourceUrl:  first(obj.edmIsShownAt) || obj.guid || "",
   };
 }
 
 // ── Fetch with retries ────────────────────────────────────────────────────────
 
-const FETCHERS = [fetchAIC, fetchAIC, fetchRijks, fetchMet, fetchSupabase, fetchSupabase];
+const FETCHERS = [fetchAIC, fetchAIC, fetchRijks, fetchMet, fetchSupabase, fetchSupabase, fetchEuropeana, fetchEuropeana, fetchLOC, fetchLOC];
 
 async function fetchMuseumObject() {
   const shuffled = [...FETCHERS].sort(() => Math.random() - 0.5);
@@ -171,14 +325,41 @@ async function fetchMuseumObject() {
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 
+// Maps source param values to their live-API fetcher functions
+const LIVE_FETCHERS = {
+  met:       fetchMet,
+  rijks:     fetchRijks,
+  aic:       fetchAIC,
+  europeana: fetchEuropeana,
+  loc:       fetchLOC,
+};
+
 export default async function handler(req) {
   const { searchParams } = new URL(req.url);
   const withContext = searchParams.get("context") === "true";
+  const source      = searchParams.get("source")  || null;   // "smithsonian" | "met" | "rijks" | …
+  const era         = searchParams.get("era")     || null;   // "1800-1900" | "after-1950" | …
+  const culture     = searchParams.get("culture") || null;   // "france" | "japan" | …
 
   let artwork;
   try {
-    artwork = await fetchMuseumObject();
+    if (LIVE_FETCHERS[source]) {
+      // Route directly to the named live-API fetcher (era/culture ignored for live sources)
+      artwork = await LIVE_FETCHERS[source]();
+    } else if (source === "smithsonian" || source === "bhl" || era || culture) {
+      // One or more DB-level filters active — query Supabase with WHERE clauses
+      artwork = await fetchSupabaseFiltered({ source, era, culture });
+    } else {
+      // No filters — current random multi-source behaviour
+      artwork = await fetchMuseumObject();
+    }
   } catch (e) {
+    if (e.message === "EMPTY_FILTER") {
+      return new Response(JSON.stringify({ empty: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     return new Response(JSON.stringify({ error: e.message }), { status: 502 });
   }
 
