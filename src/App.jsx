@@ -289,7 +289,21 @@ export default function Posy() {
           display: "flex", alignItems: "center", justifyContent: "space-between",
           borderBottom: `1px solid ${COLORS.faint}`, paddingBottom: 16,
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div
+            onClick={() => {
+              if (state === "idle") return;
+              setState("idle");
+              setArtwork(null);
+              setImageLoaded(false);
+              setImageError(false);
+              setContext("");
+              setContextState("idle");
+              setAskState("idle");
+              setQuestion("");
+              setAnswer("");
+            }}
+            style={{ display: "flex", alignItems: "center", gap: 14, cursor: state !== "idle" ? "pointer" : "default" }}
+          >
             <BouquetComponent />
             <div>
               <span style={{ fontSize: 32, fontWeight: 400, letterSpacing: "0.18em", textTransform: "uppercase", lineHeight: 1 }}>
