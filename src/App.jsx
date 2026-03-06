@@ -292,13 +292,13 @@ export default function Posy() {
 
   // Falling petals — randomised once per session, shown during loading
   const [petals] = useState(() =>
-    Array.from({ length: 26 }, () => ({
-      left:     Math.random() * 100,
-      size:     5 + Math.random() * 6,
-      fallDur:  4  + Math.random() * 4,
-      swayDur:  2  + Math.random() * 3,
-      delay:   -(Math.random() * 8),   // start mid-animation so screen fills instantly
-      shape:    Math.random() > 0.5
+    Array.from({ length: 20 }, () => ({
+      left:      Math.random() * 100,
+      size:      6 + Math.random() * 6,
+      fallDur:   11 + Math.random() * 8,   // slow, graceful descent
+      driftDur:  4  + Math.random() * 5,   // independent drift cycle
+      delay:    -(Math.random() * 16),     // seed into mid-animation immediately
+      shape:     Math.random() > 0.5
         ? "50% 50% 40% 60% / 60% 40% 55% 45%"
         : "40% 60% 55% 45% / 50% 45% 60% 50%",
     }))
@@ -731,7 +731,7 @@ export default function Posy() {
             top:            0,
             pointerEvents:  "none",
             zIndex:         10,
-            animation:      `petalSway ${p.swayDur}s ease-in-out ${p.delay}s infinite`,
+            animation:      `petalDrift ${p.driftDur}s linear ${p.delay}s infinite`,
           }}
         >
           <div style={{
@@ -780,16 +780,23 @@ export default function Posy() {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes petalFall {
-          0%   { transform: translateY(-60px) rotate(0deg);   opacity: 0; }
-          10%  { opacity: 1; }
-          88%  { opacity: 0.75; }
-          100% { transform: translateY(110vh) rotate(540deg); opacity: 0; }
+          /* Variable vertical speed: slow → catches air → drops → glides in */
+          0%   { transform: translateY(-60px); opacity: 0; }
+          6%   { opacity: 1; }
+          18%  { transform: translateY(10vh); }
+          48%  { transform: translateY(50vh); }
+          72%  { transform: translateY(65vh); }
+          92%  { opacity: 0.7; }
+          100% { transform: translateY(115vh); opacity: 0; }
         }
-        @keyframes petalSway {
-          0%   { transform: translateX(0px); }
-          25%  { transform: translateX(38px); }
-          75%  { transform: translateX(-28px); }
-          100% { transform: translateX(6px); }
+        @keyframes petalDrift {
+          /* Wide, lazy arcs — rotation follows horizontal direction like a real petal */
+          0%   { transform: translateX(0px)   rotate(-4deg); }
+          22%  { transform: translateX(85px)  rotate(13deg); }
+          45%  { transform: translateX(35px)  rotate(5deg);  }
+          68%  { transform: translateX(-75px) rotate(-15deg); }
+          88%  { transform: translateX(-18px) rotate(-4deg); }
+          100% { transform: translateX(12px)  rotate(2deg);  }
         }
         input::placeholder { color: rgba(255,255,255,0.35); font-style: italic; }
       `}</style>
