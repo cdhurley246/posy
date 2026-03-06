@@ -287,10 +287,11 @@ export default function Posy() {
         )}
       </header>
 
-      {/* Filter bar — always visible below the header */}
+      {/* Filter bar — hidden until troubleshooting is complete
       <div style={{ width: "100%", maxWidth: 720, padding: "0 32px" }}>
         <FilterBar filters={filters} onChange={handleFiltersChange} />
       </div>
+      */}
 
       <main style={{ width: "100%", maxWidth: 720, padding: "0 32px", flex: 1 }}>
 
