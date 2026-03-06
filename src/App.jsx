@@ -290,6 +290,20 @@ export default function Posy() {
   const [answer, setAnswer]             = useState("");
   const [bouquetIndex] = useState(() => Math.floor(Math.random() * BOUQUETS.length));
 
+  // Falling petals — randomised once per session, shown during loading
+  const [petals] = useState(() =>
+    Array.from({ length: 26 }, () => ({
+      left:     Math.random() * 100,
+      size:     5 + Math.random() * 6,
+      fallDur:  4  + Math.random() * 4,
+      swayDur:  2  + Math.random() * 3,
+      delay:   -(Math.random() * 8),   // start mid-animation so screen fills instantly
+      shape:    Math.random() > 0.5
+        ? "50% 50% 40% 60% / 60% 40% 55% 45%"
+        : "40% 60% 55% 45% / 50% 45% 60% 50%",
+    }))
+  );
+
   // Decorative bottom row — randomised once per visit
   const [bouquetRow] = useState(() => {
     const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
@@ -707,6 +721,29 @@ export default function Posy() {
         )}
       </main>
 
+      {/* Falling petals — loading screen only */}
+      {state === "loading" && petals.map((p, i) => (
+        <div
+          key={i}
+          style={{
+            position:       "fixed",
+            left:           `${p.left}%`,
+            top:            0,
+            pointerEvents:  "none",
+            zIndex:         10,
+            animation:      `petalSway ${p.swayDur}s ease-in-out ${p.delay}s infinite`,
+          }}
+        >
+          <div style={{
+            width:          p.size,
+            height:         p.size * 1.65,
+            background:     "rgba(255,255,255,0.88)",
+            borderRadius:   p.shape,
+            animation:      `petalFall ${p.fallDur}s linear ${p.delay}s infinite`,
+          }} />
+        </div>
+      ))}
+
       {/* Decorative bouquet row — fixed at bottom, idle screen only */}
       {state === "idle" && (
         <div style={{
@@ -742,6 +779,18 @@ export default function Posy() {
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes petalFall {
+          0%   { transform: translateY(-60px) rotate(0deg);   opacity: 0; }
+          10%  { opacity: 1; }
+          88%  { opacity: 0.75; }
+          100% { transform: translateY(110vh) rotate(540deg); opacity: 0; }
+        }
+        @keyframes petalSway {
+          0%   { transform: translateX(0px); }
+          25%  { transform: translateX(38px); }
+          75%  { transform: translateX(-28px); }
+          100% { transform: translateX(6px); }
+        }
         input::placeholder { color: rgba(255,255,255,0.35); font-style: italic; }
       `}</style>
     </div>
