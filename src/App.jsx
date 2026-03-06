@@ -171,6 +171,18 @@ export default function Posy() {
   const [answer, setAnswer]             = useState("");
   const [bouquetIndex] = useState(() => Math.floor(Math.random() * BOUQUETS.length));
 
+  // Decorative bottom row — randomised once per visit
+  const [bouquetRow] = useState(() => {
+    const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
+    const count = Math.ceil(vw / 46) + 2;
+    return Array.from({ length: count }, () => ({
+      variant: Math.floor(Math.random() * BOUQUETS.length),
+      scale:   0.7  + Math.random() * 0.55,
+      opacity: 0.12 + Math.random() * 0.20,
+      rotate:  -12  + Math.random() * 24,
+    }));
+  });
+
   // Filter state — null means "All" (no filter active)
   const [filters, setFilters] = useState({ source: null, era: null, culture: null });
   // Ref so discover() always reads the latest filters without being in its dep array
@@ -575,6 +587,38 @@ export default function Posy() {
           </div>
         )}
       </main>
+
+      {/* Decorative bouquet row — fixed at bottom, idle screen only */}
+      {state === "idle" && (
+        <div style={{
+          position:      "fixed",
+          bottom:        0,
+          left:          0,
+          right:         0,
+          display:       "flex",
+          alignItems:    "flex-end",
+          overflow:      "hidden",
+          gap:           2,
+          pointerEvents: "none",
+          animation:     "fadeIn 1.4s ease",
+          zIndex:        0,
+        }}>
+          {bouquetRow.map((b, i) => {
+            const Bq = BOUQUETS[b.variant];
+            return (
+              <div key={i} style={{
+                opacity:         b.opacity,
+                transform:       `scale(${b.scale}) rotate(${b.rotate}deg)`,
+                transformOrigin: "bottom center",
+                flexShrink:      0,
+                lineHeight:      0,
+              }}>
+                <Bq />
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
