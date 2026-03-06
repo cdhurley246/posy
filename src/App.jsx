@@ -166,6 +166,9 @@ export default function Posy() {
   const [showAbout, setShowAbout] = useState(false);
   const [context, setContext] = useState("");
   const [contextState, setContextState] = useState("idle"); // idle | loading | loaded
+  const [askState, setAskState]         = useState("idle"); // idle | open | loading | answered
+  const [question, setQuestion]         = useState("");
+  const [answer, setAnswer]             = useState("");
   const [bouquetIndex] = useState(() => Math.floor(Math.random() * BOUQUETS.length));
 
   // Filter state — null means "All" (no filter active)
@@ -185,6 +188,9 @@ export default function Posy() {
     setImageError(false);
     setContext("");
     setContextState("idle");
+    setAskState("idle");
+    setQuestion("");
+    setAnswer("");
     try {
       const art = await fetchArtwork(activeFilters);
       if (art.empty) {
@@ -211,6 +217,34 @@ export default function Posy() {
       discover(cleaned);
     }
   }
+
+  const askQuestion = useCallback(async (q) => {
+    if (!q.trim() || !artwork) return;
+    setAskState("loading");
+    try {
+      const res = await fetch("/api/context", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title:      artwork.title,
+          artist:     artwork.artist,
+          date:       artwork.date,
+          origin:     artwork.origin,
+          medium:     artwork.medium,
+          collection: artwork.collection,
+          context,           // existing "tell me more" paragraph for reference
+          question:   q,
+        }),
+      });
+      if (!res.ok) throw new Error("Question failed");
+      const data = await res.json();
+      setAnswer(data.answer || "");
+      setAskState("answered");
+    } catch (e) {
+      console.error(e);
+      setAskState("open");  // fall back so user can retry
+    }
+  }, [artwork, context]);
 
   const tellMeMore = useCallback(async () => {
     if (!artwork || contextState === "loading" || contextState === "loaded") return;
@@ -416,9 +450,98 @@ export default function Posy() {
             {contextState === "loaded" && context && (
               <div style={{ animation: "fadeIn 0.5s ease", marginBottom: 14 }}>
                 <div style={{ borderTop: `1px solid ${COLORS.faint}`, margin: "0 0 18px" }} />
-                <p style={{ fontSize: 15, lineHeight: 1.95, color: "rgba(255,255,255,0.85)", margin: 0, fontStyle: "italic" }}>
+                <p style={{ fontSize: 15, lineHeight: 1.95, color: "rgba(255,255,255,0.85)", margin: "0 0 16px", fontStyle: "italic" }}>
                   {context}
                 </p>
+
+                {/* ── Ask a question ──────────────────────────────────── */}
+
+                {askState === "idle" && (
+                  <button
+                    onClick={() => setAskState("open")}
+                    style={{
+                      background: "transparent", border: "none",
+                      color: COLORS.muted, fontSize: 11,
+                      letterSpacing: "0.12em", textTransform: "uppercase",
+                      cursor: "pointer", fontFamily: "inherit", padding: 0,
+                      borderBottom: "1px solid rgba(255,255,255,0.2)", paddingBottom: 1,
+                    }}
+                    onMouseEnter={e => e.target.style.color = "#ffffff"}
+                    onMouseLeave={e => e.target.style.color = COLORS.muted}
+                  >
+                    ask a question
+                  </button>
+                )}
+
+                {askState === "open" && (
+                  <form
+                    onSubmit={e => { e.preventDefault(); askQuestion(question); }}
+                    style={{ display: "flex", alignItems: "center", gap: 10 }}
+                  >
+                    <input
+                      type="text"
+                      value={question}
+                      onChange={e => setQuestion(e.target.value)}
+                      placeholder="what would you like to know?"
+                      autoFocus
+                      style={{
+                        flex: 1, background: "transparent", border: "none",
+                        borderBottom: "1px solid rgba(255,255,255,0.35)",
+                        color: "#ffffff", fontFamily: "inherit",
+                        fontSize: 13, fontStyle: "italic",
+                        padding: "4px 0", outline: "none",
+                        letterSpacing: "0.02em",
+                      }}
+                    />
+                    <button
+                      type="submit"
+                      style={{
+                        background: "transparent", border: "none",
+                        color: COLORS.muted, fontSize: 16, cursor: "pointer",
+                        padding: 0, fontFamily: "inherit", lineHeight: 1,
+                        flexShrink: 0,
+                      }}
+                      onMouseEnter={e => e.target.style.color = "#ffffff"}
+                      onMouseLeave={e => e.target.style.color = COLORS.muted}
+                    >
+                      →
+                    </button>
+                  </form>
+                )}
+
+                {askState === "loading" && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <Spinner small />
+                    <span style={{ fontSize: 11, color: COLORS.muted, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                      thinking
+                    </span>
+                  </div>
+                )}
+
+                {askState === "answered" && answer && (
+                  <div style={{ animation: "fadeIn 0.4s ease" }}>
+                    <p style={{ fontSize: 11, color: COLORS.muted, fontStyle: "italic", margin: "0 0 8px", letterSpacing: "0.04em", opacity: 0.8 }}>
+                      "{question}"
+                    </p>
+                    <p style={{ fontSize: 15, lineHeight: 1.95, color: "rgba(255,255,255,0.85)", margin: "0 0 14px" }}>
+                      {answer}
+                    </p>
+                    <button
+                      onClick={() => { setAskState("open"); setQuestion(""); setAnswer(""); }}
+                      style={{
+                        background: "transparent", border: "none",
+                        color: COLORS.muted, fontSize: 11,
+                        letterSpacing: "0.12em", textTransform: "uppercase",
+                        cursor: "pointer", fontFamily: "inherit", padding: 0,
+                        borderBottom: "1px solid rgba(255,255,255,0.2)", paddingBottom: 1,
+                      }}
+                      onMouseEnter={e => e.target.style.color = "#ffffff"}
+                      onMouseLeave={e => e.target.style.color = COLORS.muted}
+                    >
+                      ask another
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -435,6 +558,7 @@ export default function Posy() {
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        input::placeholder { color: rgba(255,255,255,0.35); font-style: italic; }
       `}</style>
     </div>
   );
