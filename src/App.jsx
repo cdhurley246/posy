@@ -273,6 +273,21 @@ function BouquetF() {
 
 const BOUQUETS = [BouquetA, BouquetB, BouquetC, BouquetD, BouquetE, BouquetF];
 
+// ── Petal shapes ─────────────────────────────────────────────────────────────
+// Each has a normalised SVG path, intrinsic width + height for the viewBox.
+// Shapes are elongated and tapered — lens, teardrop, and curved asymmetric.
+
+const PETAL_SHAPES = [
+  // Classic lens: pointed at both ends, widest in the middle
+  { d: "M0,5 Q8,0 30,5 Q8,10 0,5Z",                           w: 30, h: 10 },
+  // Teardrop: rounded tip on one side, sharp point on the other
+  { d: "M0,5 Q3,0 22,3 Q28,5 22,7 Q3,10 0,5Z",               w: 28, h: 10 },
+  // Curved / banana: asymmetric, slightly bowed along its length
+  { d: "M0,7 Q6,0 20,2 Q28,4 26,9 Q18,14 4,11 Q-1,9 0,7Z",   w: 28, h: 14 },
+  // Slim lance: very narrow, like a thin willow leaf
+  { d: "M0,4 Q10,0 32,4 Q10,8 0,4Z",                          w: 32, h:  8 },
+];
+
 // ── App ───────────────────────────────────────────────────────────────────────
 
 const LIVE_SOURCES = ["met", "rijks", "aic", "europeana", "loc"];
@@ -293,14 +308,12 @@ export default function Posy() {
   // Falling petals — randomised once per session, shown during loading
   const [petals] = useState(() =>
     Array.from({ length: 20 }, () => ({
-      left:      Math.random() * 100,
-      size:      6 + Math.random() * 6,
-      fallDur:   11 + Math.random() * 8,   // slow, graceful descent
-      driftDur:  4  + Math.random() * 5,   // independent drift cycle
-      delay:    -(Math.random() * 16),     // seed into mid-animation immediately
-      shape:     Math.random() > 0.5
-        ? "50% 50% 40% 60% / 60% 40% 55% 45%"
-        : "40% 60% 55% 45% / 50% 45% 60% 50%",
+      left:     Math.random() * 100,
+      scale:    0.7 + Math.random() * 0.7,   // 0.7–1.4× the base SVG size
+      type:     Math.floor(Math.random() * PETAL_SHAPES.length),
+      fallDur:  11 + Math.random() * 8,
+      driftDur: 4  + Math.random() * 5,
+      delay:   -(Math.random() * 16),
     }))
   );
 
@@ -734,13 +747,14 @@ export default function Posy() {
             animation:      `petalDrift ${p.driftDur}s linear ${p.delay}s infinite`,
           }}
         >
-          <div style={{
-            width:          p.size,
-            height:         p.size * 1.65,
-            background:     "rgba(255,255,255,0.88)",
-            borderRadius:   p.shape,
-            animation:      `petalFall ${p.fallDur}s linear ${p.delay}s infinite`,
-          }} />
+          <svg
+            width={PETAL_SHAPES[p.type].w * p.scale}
+            height={PETAL_SHAPES[p.type].h * p.scale}
+            viewBox={`0 0 ${PETAL_SHAPES[p.type].w} ${PETAL_SHAPES[p.type].h}`}
+            style={{ display: "block", animation: `petalFall ${p.fallDur}s linear ${p.delay}s infinite` }}
+          >
+            <path d={PETAL_SHAPES[p.type].d} fill="rgba(255,255,255,0.82)" />
+          </svg>
         </div>
       ))}
 
