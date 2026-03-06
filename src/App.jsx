@@ -152,7 +152,126 @@ function BouquetC() {
   );
 }
 
-const BOUQUETS = [BouquetA, BouquetB, BouquetC];
+function BouquetD() {
+  // Loose wildflower spray — tall grasses, a poppy, scattered dots
+  return (
+    <svg width="44" height="52" viewBox="0 0 44 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* stems */}
+      <line x1="22" y1="47" x2="18" y2="28" stroke="white" strokeWidth="1.2" strokeLinecap="round"/>
+      <line x1="22" y1="47" x2="22" y2="25" stroke="white" strokeWidth="1.2" strokeLinecap="round"/>
+      <line x1="22" y1="47" x2="26" y2="28" stroke="white" strokeWidth="1.2" strokeLinecap="round"/>
+      <line x1="22" y1="47" x2="12" y2="32" stroke="white" strokeWidth="1.1" strokeLinecap="round"/>
+      <line x1="22" y1="47" x2="32" y2="32" stroke="white" strokeWidth="1.1" strokeLinecap="round"/>
+      {/* wrap */}
+      <path d="M15 45 Q22 49 29 45" stroke="white" strokeWidth="1.2" fill="none" strokeLinecap="round"/>
+      {/* poppy centre */}
+      <circle cx="22" cy="18" r="3" stroke="white" strokeWidth="1.1"/>
+      <circle cx="22" cy="18" r="1.2" stroke="white" strokeWidth="0.8" fill="none"/>
+      {/* poppy petals */}
+      <ellipse cx="22" cy="12.5" rx="2" ry="3.2" stroke="white" strokeWidth="0.9" fill="none"/>
+      <ellipse cx="27" cy="14.5" rx="2" ry="3.2" stroke="white" strokeWidth="0.9" fill="none" transform="rotate(60 27 14.5)"/>
+      <ellipse cx="27" cy="21.5" rx="2" ry="3.2" stroke="white" strokeWidth="0.9" fill="none" transform="rotate(120 27 21.5)"/>
+      <ellipse cx="22" cy="23.5" rx="2" ry="3.2" stroke="white" strokeWidth="0.9" fill="none"/>
+      <ellipse cx="17" cy="21.5" rx="2" ry="3.2" stroke="white" strokeWidth="0.9" fill="none" transform="rotate(60 17 21.5)"/>
+      <ellipse cx="17" cy="14.5" rx="2" ry="3.2" stroke="white" strokeWidth="0.9" fill="none" transform="rotate(120 17 14.5)"/>
+      {/* side buds */}
+      <circle cx="12" cy="26" r="1.3" stroke="white" strokeWidth="0.9" fill="none"/>
+      <path d="M11 24 Q12 22 13 24" stroke="white" strokeWidth="0.8" fill="none" strokeLinecap="round"/>
+      <circle cx="32" cy="26" r="1.3" stroke="white" strokeWidth="0.9" fill="none"/>
+      <path d="M31 24 Q32 22 33 24" stroke="white" strokeWidth="0.8" fill="none" strokeLinecap="round"/>
+      {/* tiny scattered dots */}
+      <circle cx="16" cy="10" r="0.8" stroke="white" strokeWidth="0.8" fill="none"/>
+      <circle cx="28" cy="9"  r="0.8" stroke="white" strokeWidth="0.8" fill="none"/>
+      <line x1="16" y1="10.8" x2="16" y2="14" stroke="white" strokeWidth="0.8" strokeLinecap="round"/>
+      <line x1="28" y1="9.8"  x2="28" y2="13" stroke="white" strokeWidth="0.8" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+function BouquetE() {
+  // Tulip trio — three distinct tulip heads on curved stems
+  return (
+    <svg width="44" height="52" viewBox="0 0 44 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* stems */}
+      <path d="M22 47 Q20 38 17 28" stroke="white" strokeWidth="1.2" fill="none" strokeLinecap="round"/>
+      <line x1="22" y1="47" x2="22" y2="26" stroke="white" strokeWidth="1.2" strokeLinecap="round"/>
+      <path d="M22 47 Q24 38 27 28" stroke="white" strokeWidth="1.2" fill="none" strokeLinecap="round"/>
+      <line x1="22" y1="47" x2="11" y2="34" stroke="white" strokeWidth="1.1" strokeLinecap="round"/>
+      <line x1="22" y1="47" x2="33" y2="34" stroke="white" strokeWidth="1.1" strokeLinecap="round"/>
+      {/* wrap */}
+      <path d="M15 45 Q22 49 29 45" stroke="white" strokeWidth="1.2" fill="none" strokeLinecap="round"/>
+      {/* centre tulip */}
+      <path d="M19 26 Q19 18 22 17 Q25 18 25 26 Q22 28 19 26Z" stroke="white" strokeWidth="1" fill="none"/>
+      <path d="M20 22 Q22 19 24 22" stroke="white" strokeWidth="0.8" fill="none" strokeLinecap="round"/>
+      {/* left tulip */}
+      <path d="M14 28 Q14 21 17 20 Q20 21 20 28 Q17 30 14 28Z" stroke="white" strokeWidth="1" fill="none"/>
+      <path d="M15 24 Q17 21 19 24" stroke="white" strokeWidth="0.8" fill="none" strokeLinecap="round"/>
+      {/* right tulip */}
+      <path d="M24 28 Q24 21 27 20 Q30 21 30 28 Q27 30 24 28Z" stroke="white" strokeWidth="1" fill="none"/>
+      <path d="M25 24 Q27 21 29 24" stroke="white" strokeWidth="0.8" fill="none" strokeLinecap="round"/>
+      {/* outer side stems / leaves */}
+      <path d="M11 34 Q9 30 10 25" stroke="white" strokeWidth="0.9" fill="none" strokeLinecap="round"/>
+      <path d="M10 25 Q8 22 10 19" stroke="white" strokeWidth="0.9" fill="none" strokeLinecap="round"/>
+      <circle cx="10" cy="18" r="1.2" stroke="white" strokeWidth="0.9" fill="none"/>
+      <path d="M33 34 Q35 30 34 25" stroke="white" strokeWidth="0.9" fill="none" strokeLinecap="round"/>
+      <path d="M34 25 Q36 22 34 19" stroke="white" strokeWidth="0.9" fill="none" strokeLinecap="round"/>
+      <circle cx="34" cy="18" r="1.2" stroke="white" strokeWidth="0.9" fill="none"/>
+    </svg>
+  );
+}
+
+function BouquetF() {
+  // Daisy cluster — flat open daisies with ray petals
+  return (
+    <svg width="44" height="52" viewBox="0 0 44 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* stems */}
+      <line x1="22" y1="47" x2="16" y2="29" stroke="white" strokeWidth="1.2" strokeLinecap="round"/>
+      <line x1="22" y1="47" x2="22" y2="27" stroke="white" strokeWidth="1.2" strokeLinecap="round"/>
+      <line x1="22" y1="47" x2="28" y2="29" stroke="white" strokeWidth="1.2" strokeLinecap="round"/>
+      <line x1="22" y1="47" x2="11" y2="33" stroke="white" strokeWidth="1.1" strokeLinecap="round"/>
+      <line x1="22" y1="47" x2="33" y2="33" stroke="white" strokeWidth="1.1" strokeLinecap="round"/>
+      {/* wrap */}
+      <path d="M15 45 Q22 49 29 45" stroke="white" strokeWidth="1.2" fill="none" strokeLinecap="round"/>
+      {/* centre daisy */}
+      <circle cx="22" cy="20" r="2.2" stroke="white" strokeWidth="1.1"/>
+      <line x1="22" y1="14" x2="22" y2="17" stroke="white" strokeWidth="1" strokeLinecap="round"/>
+      <line x1="22" y1="23" x2="22" y2="26" stroke="white" strokeWidth="1" strokeLinecap="round"/>
+      <line x1="16" y1="20" x2="19" y2="20" stroke="white" strokeWidth="1" strokeLinecap="round"/>
+      <line x1="25" y1="20" x2="28" y2="20" stroke="white" strokeWidth="1" strokeLinecap="round"/>
+      <line x1="17.8" y1="15.8" x2="19.9" y2="17.9" stroke="white" strokeWidth="1" strokeLinecap="round"/>
+      <line x1="24.1" y1="22.1" x2="26.2" y2="24.2" stroke="white" strokeWidth="1" strokeLinecap="round"/>
+      <line x1="26.2" y1="15.8" x2="24.1" y2="17.9" stroke="white" strokeWidth="1" strokeLinecap="round"/>
+      <line x1="19.9" y1="22.1" x2="17.8" y2="24.2" stroke="white" strokeWidth="1" strokeLinecap="round"/>
+      {/* left daisy */}
+      <circle cx="11" cy="27" r="1.6" stroke="white" strokeWidth="1"/>
+      <line x1="11" y1="23" x2="11" y2="25" stroke="white" strokeWidth="0.9" strokeLinecap="round"/>
+      <line x1="11" y1="29" x2="11" y2="31" stroke="white" strokeWidth="0.9" strokeLinecap="round"/>
+      <line x1="7"  y1="27" x2="9"  y2="27" stroke="white" strokeWidth="0.9" strokeLinecap="round"/>
+      <line x1="13" y1="27" x2="15" y2="27" stroke="white" strokeWidth="0.9" strokeLinecap="round"/>
+      <line x1="8.9" y1="24.9" x2="10.1" y2="26.1" stroke="white" strokeWidth="0.9" strokeLinecap="round"/>
+      <line x1="11.9" y1="27.9" x2="13.1" y2="29.1" stroke="white" strokeWidth="0.9" strokeLinecap="round"/>
+      <line x1="13.1" y1="24.9" x2="11.9" y2="26.1" stroke="white" strokeWidth="0.9" strokeLinecap="round"/>
+      <line x1="10.1" y1="27.9" x2="8.9"  y2="29.1" stroke="white" strokeWidth="0.9" strokeLinecap="round"/>
+      {/* right daisy */}
+      <circle cx="33" cy="27" r="1.6" stroke="white" strokeWidth="1"/>
+      <line x1="33" y1="23" x2="33" y2="25" stroke="white" strokeWidth="0.9" strokeLinecap="round"/>
+      <line x1="33" y1="29" x2="33" y2="31" stroke="white" strokeWidth="0.9" strokeLinecap="round"/>
+      <line x1="29" y1="27" x2="31" y2="27" stroke="white" strokeWidth="0.9" strokeLinecap="round"/>
+      <line x1="35" y1="27" x2="37" y2="27" stroke="white" strokeWidth="0.9" strokeLinecap="round"/>
+      <line x1="30.9" y1="24.9" x2="32.1" y2="26.1" stroke="white" strokeWidth="0.9" strokeLinecap="round"/>
+      <line x1="33.9" y1="27.9" x2="35.1" y2="29.1" stroke="white" strokeWidth="0.9" strokeLinecap="round"/>
+      <line x1="35.1" y1="24.9" x2="33.9" y2="26.1" stroke="white" strokeWidth="0.9" strokeLinecap="round"/>
+      <line x1="32.1" y1="27.9" x2="30.9" y2="29.1" stroke="white" strokeWidth="0.9" strokeLinecap="round"/>
+      {/* tiny buds at top */}
+      <circle cx="17" cy="12" r="1" stroke="white" strokeWidth="0.9" fill="none"/>
+      <line x1="17" y1="13" x2="17" y2="16" stroke="white" strokeWidth="0.9" strokeLinecap="round"/>
+      <circle cx="27" cy="11" r="1" stroke="white" strokeWidth="0.9" fill="none"/>
+      <line x1="27" y1="12" x2="27" y2="15" stroke="white" strokeWidth="0.9" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+const BOUQUETS = [BouquetA, BouquetB, BouquetC, BouquetD, BouquetE, BouquetF];
 
 // ── App ───────────────────────────────────────────────────────────────────────
 
@@ -178,7 +297,7 @@ export default function Posy() {
     return Array.from({ length: count }, () => ({
       variant: Math.floor(Math.random() * BOUQUETS.length),
       scale:   0.7  + Math.random() * 0.55,
-      opacity: 0.12 + Math.random() * 0.20,
+      opacity: 0.28 + Math.random() * 0.28,
       rotate:  -12  + Math.random() * 24,
     }));
   });
