@@ -307,9 +307,107 @@ async function fetchEuropeana() {
   };
 }
 
+// ── Victoria and Albert Museum ───────────────────────────────────────────────
+// Focused on Global South places — South Asia, sub-Saharan Africa,
+// Southeast Asia, Latin America. V&A has deep holdings in all of these.
+
+const VAM_PLACES = [
+  "India", "Sri Lanka", "Pakistan",
+  "Nigeria", "Ghana", "Kenya", "Ethiopia",
+  "Indonesia", "Thailand", "Vietnam", "Cambodia",
+  "Peru", "Mexico", "Colombia",
+  "Morocco",
+];
+
+async function fetchVAM() {
+  const place = VAM_PLACES[Math.floor(Math.random() * VAM_PLACES.length)];
+  const page  = Math.floor(Math.random() * 15) + 1;
+  const url   = `https://api.vam.ac.uk/v2/objects/search?images_exist=1&page_size=20&page=${page}&place=${encodeURIComponent(place)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`V&A ${res.status}`);
+  const data = await res.json();
+
+  const items = (data.records || []).filter(r => r._images?._primary_thumbnail);
+  if (!items.length) throw new Error("V&A: no items with images");
+
+  const obj = items[Math.floor(Math.random() * items.length)];
+  // Upgrade thumbnail (100px) to a display-quality size
+  const imageUrl = (obj._images._primary_thumbnail || "")
+    .replace(/\/full\/[^/]+\/0\/default\.jpg$/, "/full/!1200,1200/0/default.jpg");
+  if (!imageUrl) throw new Error("V&A: could not construct image URL");
+
+  return {
+    title:      obj._primaryTitle || "Untitled",
+    artist:     obj._primaryMaker?.name || "",
+    date:       obj._primaryDate || "",
+    origin:     obj._primaryPlace || place,
+    medium:     obj._primaryMaterial || obj.objectType || "",
+    collection: "Victoria and Albert Museum",
+    department: obj.objectType || "",
+    imageUrl,
+    sourceUrl:  `https://collections.vam.ac.uk/item/${obj.systemNumber}/`,
+  };
+}
+
+// ── Cleveland Museum of Art ───────────────────────────────────────────────────
+// Departments chosen for Global South coverage: African, South/SE Asian,
+// Americas, and Islamic art. Free API, no key required.
+
+const CMA_DEPARTMENTS = [
+  "African Art",
+  "Indian and Southeast Asian Art",
+  "Art of the Americas",
+  "Islamic Art",
+];
+
+async function fetchCleveland() {
+  const dept = CMA_DEPARTMENTS[Math.floor(Math.random() * CMA_DEPARTMENTS.length)];
+
+  // Count first, then random-offset fetch (same pattern as Supabase)
+  const countRes = await fetch(
+    `https://openaccess-api.clevelandart.org/api/artworks/?has_image=1&department=${encodeURIComponent(dept)}&limit=1`
+  );
+  if (!countRes.ok) throw new Error(`Cleveland count ${countRes.status}`);
+  const countData = await countRes.json();
+  const total = countData.info?.total || 100;
+
+  const skip = Math.floor(Math.random() * Math.min(total, 800));
+  const res  = await fetch(
+    `https://openaccess-api.clevelandart.org/api/artworks/?has_image=1&department=${encodeURIComponent(dept)}&limit=10&skip=${skip}`
+  );
+  if (!res.ok) throw new Error(`Cleveland ${res.status}`);
+  const data = await res.json();
+
+  const items = (data.data || []).filter(o => o.images?.web?.url);
+  if (!items.length) throw new Error("Cleveland: no items with images");
+
+  const obj    = items[Math.floor(Math.random() * items.length)];
+  const artist = (obj.creators || [])[0]?.description || "";
+
+  return {
+    title:      obj.title || "Untitled",
+    artist,
+    date:       obj.creation_date || "",
+    origin:     obj.culture || "",
+    medium:     obj.technique || obj.medium || "",
+    collection: "Cleveland Museum of Art",
+    department: obj.department || dept,
+    imageUrl:   obj.images.web.url,
+    sourceUrl:  obj.url || `https://www.clevelandart.org/art/${obj.accession_number}`,
+  };
+}
+
 // ── Fetch with retries ────────────────────────────────────────────────────────
 
-const FETCHERS = [fetchAIC, fetchAIC, fetchRijks, fetchMet, fetchSupabase, fetchSupabase, fetchEuropeana, fetchEuropeana, fetchLOC, fetchLOC];
+const FETCHERS = [
+  fetchAIC, fetchAIC,
+  fetchRijks, fetchMet,
+  fetchSupabase, fetchSupabase,
+  fetchEuropeana, fetchEuropeana,
+  fetchLOC, fetchLOC,
+  fetchVAM, fetchVAM,
+  fetchCleveland, fetchCleveland,
+];
 
 async function fetchMuseumObject() {
   const shuffled = [...FETCHERS].sort(() => Math.random() - 0.5);
@@ -332,6 +430,8 @@ const LIVE_FETCHERS = {
   aic:       fetchAIC,
   europeana: fetchEuropeana,
   loc:       fetchLOC,
+  vam:       fetchVAM,
+  cleveland: fetchCleveland,
 };
 
 export default async function handler(req) {
