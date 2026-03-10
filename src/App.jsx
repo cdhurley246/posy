@@ -522,7 +522,7 @@ export default function Posy() {
                 <textarea
                   value={feedbackText}
                   onChange={e => setFeedbackText(e.target.value)}
-                  placeholder="what's working, what isn't, what you found..."
+                  placeholder="feedback"
                   rows={3}
                   style={{
                     width: "100%", background: "transparent", border: "none",
@@ -547,7 +547,7 @@ export default function Posy() {
                       transition: "all 0.22s ease",
                     }}
                   >
-                    {feedbackState === 'sending' ? 'sending' : 'feedback'}
+                    {feedbackState === 'sending' ? 'sending' : 'send'}
                   </button>
                 </div>
               </div>
