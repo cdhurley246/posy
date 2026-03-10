@@ -1,5 +1,6 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import FilterBar from "./FilterBar.jsx";
+import { supabase } from './supabase.js';
 
 async function fetchArtwork(filters = {}) {
   const params = new URLSearchParams({ context: "false" });
@@ -307,6 +308,16 @@ export default function Posy() {
   const [answer, setAnswer]             = useState("");
   const [bouquetIndex] = useState(() => Math.floor(Math.random() * BOUQUETS.length));
 
+  // ── Auth + saves ──────────────────────────────────────────────────────────
+  const [user, setUser] = useState(null);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authState, setAuthState] = useState('idle'); // idle | sending | sent
+  const pendingSaveRef = useRef(null); // image to save after auth (ref avoids stale closure)
+  const [savedIds, setSavedIds] = useState(new Set());
+  const [showCollection, setShowCollection] = useState(false);
+  const [collectionImages, setCollectionImages] = useState([]);
+
   // Falling petals — randomised once per session, shown during loading
   const [petals] = useState(() =>
     Array.from({ length: 20 }, () => ({
@@ -337,6 +348,35 @@ export default function Posy() {
   const filtersRef = useRef({ source: null, era: null, culture: null });
 
   const BouquetComponent = BOUQUETS[bouquetIndex];
+
+  // ── Auth listener ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const u = session?.user ?? null;
+      setUser(u);
+      if (u) loadSaves(u.id);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        const u = session?.user ?? null;
+        setUser(u);
+        if (u) {
+          loadSaves(u.id);
+          if (pendingSaveRef.current) {
+            saveImage(pendingSaveRef.current, u.id);
+            pendingSaveRef.current = null;
+          }
+        }
+      }
+    );
+    return () => subscription.unsubscribe();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Load collection when panel opens ──────────────────────────────────────
+  useEffect(() => {
+    if (showCollection && user) loadCollection(user.id);
+  }, [showCollection]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // discover() accepts an optional filtersOverride so filter changes can pass fresh
   // values immediately (setState is async; the ref is updated synchronously before calling).
@@ -421,6 +461,72 @@ export default function Posy() {
     }
   }
 
+  // ── Save helpers ──────────────────────────────────────────────────────────
+
+  async function loadSaves(userId) {
+    const { data } = await supabase
+      .from('saves')
+      .select('image_id')
+      .eq('user_id', userId);
+    if (data) setSavedIds(new Set(data.map(s => s.image_id)));
+  }
+
+  async function handleSave(image) {
+    if (!user) {
+      pendingSaveRef.current = image;
+      setShowAuthPrompt(true);
+      return;
+    }
+    await saveImage(image, user.id);
+  }
+
+  async function saveImage(image, userId) {
+    const imageId = image.sourceUrl || image.source_url;
+    const alreadySaved = savedIds.has(imageId);
+    if (alreadySaved) {
+      await supabase.from('saves').delete()
+        .eq('user_id', userId)
+        .eq('image_id', imageId);
+      setSavedIds(prev => { const s = new Set(prev); s.delete(imageId); return s; });
+    } else {
+      await supabase.from('saves').insert({
+        user_id: userId,
+        image_id: imageId,
+        image_url: image.imageUrl || image.image_url,
+        title: image.title,
+        source_institution: image.collection || image.source_institution,
+        source_url: imageId,
+      });
+      setSavedIds(prev => new Set([...prev, imageId]));
+    }
+  }
+
+  async function sendMagicLink() {
+    if (!authEmail.trim()) return;
+    setAuthState('sending');
+    const { error } = await supabase.auth.signInWithOtp({
+      email: authEmail,
+      options: { emailRedirectTo: 'https://posy-eight.vercel.app' },
+    });
+    setAuthState(error ? 'idle' : 'sent');
+  }
+
+  async function loadCollection(userId) {
+    const { data } = await supabase
+      .from('saves')
+      .select('*')
+      .eq('user_id', userId)
+      .order('saved_at', { ascending: false });
+    if (data) setCollectionImages(data);
+  }
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    setUser(null);
+    setSavedIds(new Set());
+    setShowCollection(false);
+  }
+
   const tellMeMore = useCallback(async () => {
     if (!artwork || contextState === "loading" || contextState === "loaded") return;
     setContextState("loading");
@@ -490,17 +596,26 @@ export default function Posy() {
               </span>
             </div>
           </div>
-          <button onClick={() => {
-            setShowAbout(v => !v);
-            if (showAbout) {
-              setFeedbackText('');
-              setFeedbackState('idle');
-            }
-          }} style={{
-            background: "transparent", border: "none", color: COLORS.muted,
-            fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
-            cursor: "pointer", fontFamily: "inherit", padding: 0,
-          }}>{showAbout ? "close" : "about"}</button>
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            {user && (
+              <button onClick={() => setShowCollection(true)} style={{
+                background: "transparent", border: "none", color: COLORS.muted,
+                fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
+                cursor: "pointer", fontFamily: "inherit", padding: 0,
+              }}>your bouquet</button>
+            )}
+            <button onClick={() => {
+              setShowAbout(v => !v);
+              if (showAbout) {
+                setFeedbackText('');
+                setFeedbackState('idle');
+              }
+            }} style={{
+              background: "transparent", border: "none", color: COLORS.muted,
+              fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
+              cursor: "pointer", fontFamily: "inherit", padding: 0,
+            }}>{showAbout ? "close" : "about"}</button>
+          </div>
         </div>
 
         {showAbout && (
@@ -552,6 +667,18 @@ export default function Posy() {
                 </div>
               </div>
             )}
+
+            {user && (
+              <>
+                <div style={{ borderTop: `1px solid ${COLORS.faint}`, margin: "12px 0" }} />
+                <button onClick={signOut} style={{
+                  background: "transparent", border: "none", color: COLORS.muted,
+                  fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase",
+                  cursor: "pointer", fontFamily: "inherit", padding: 0,
+                  fontStyle: "italic",
+                }}>sign out</button>
+              </>
+            )}
           </div>
         )}
       </header>
@@ -564,7 +691,82 @@ export default function Posy() {
 
       <main style={{ width: "100%", maxWidth: 720, padding: "0 32px", flex: 1 }}>
 
-        {state === "idle" && (
+        {/* ── Collection view ────────────────────────────────────────────── */}
+        {showCollection && (
+          <div style={{ paddingTop: 28, animation: "fadeIn 0.4s ease" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
+              <button onClick={() => setShowCollection(false)} style={{
+                background: "transparent", border: "none", color: COLORS.muted,
+                fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
+                cursor: "pointer", fontFamily: "inherit", padding: 0,
+                borderBottom: "1px solid rgba(255,255,255,0.2)", paddingBottom: 1,
+              }}>← back</button>
+              <span style={{ fontSize: 11, color: COLORS.muted, letterSpacing: "0.12em", textTransform: "uppercase" }}>
+                your bouquet
+              </span>
+            </div>
+
+            {collectionImages.length === 0 ? (
+              <p style={{ color: COLORS.muted, fontStyle: "italic", fontSize: 14, textAlign: "center", paddingTop: 40 }}>
+                nothing saved yet — go find something.
+              </p>
+            ) : (
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+                gap: 12,
+              }}>
+                {collectionImages.map(saved => (
+                  <div
+                    key={saved.id}
+                    onClick={() => {
+                      setArtwork({
+                        title: saved.title,
+                        artist: '',
+                        date: '',
+                        origin: '',
+                        medium: '',
+                        collection: saved.source_institution,
+                        imageUrl: saved.image_url,
+                        sourceUrl: saved.source_url,
+                      });
+                      setState("loaded");
+                      setImageLoaded(false);
+                      setImageError(false);
+                      setContext("");
+                      setContextState("idle");
+                      setAskState("idle");
+                      setQuestion("");
+                      setAnswer("");
+                      setShowCollection(false);
+                    }}
+                    style={{ cursor: "pointer", background: COLORS.panel, overflow: "hidden" }}
+                  >
+                    {saved.image_url ? (
+                      <img
+                        src={saved.image_url}
+                        alt={saved.title}
+                        style={{ width: "100%", aspectRatio: "1", objectFit: "cover", display: "block" }}
+                      />
+                    ) : (
+                      <div style={{ aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ color: COLORS.muted, fontSize: 11 }}>no image</span>
+                      </div>
+                    )}
+                    <div style={{ padding: "8px 10px" }}>
+                      <p style={{ margin: 0, fontSize: 11, color: COLORS.muted, lineHeight: 1.4,
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {saved.title || "Untitled"}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {!showCollection && state === "idle" && (
           <div style={{
             display: "flex", flexDirection: "column", alignItems: "center",
             paddingTop: "14vh", animation: "fadeIn 0.8s ease",
@@ -583,7 +785,7 @@ export default function Posy() {
           </div>
         )}
 
-        {state === "loading" && (
+        {!showCollection && state === "loading" && (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: "14vh" }}>
             <Spinner />
             <p style={{ color: COLORS.muted, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", marginTop: 18 }}>
@@ -592,7 +794,7 @@ export default function Posy() {
           </div>
         )}
 
-        {state === "error" && (
+        {!showCollection && state === "error" && (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: "14vh" }}>
             <p style={{ color: COLORS.muted, marginBottom: 28, fontSize: 14, fontStyle: "italic" }}>
               Couldn't reach the archive.
@@ -601,7 +803,7 @@ export default function Posy() {
           </div>
         )}
 
-        {state === "no_results" && (
+        {!showCollection && state === "no_results" && (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: "14vh" }}>
             <p style={{ color: COLORS.muted, marginBottom: 6, fontSize: 14, fontStyle: "italic", textAlign: "center" }}>
               Nothing in the archive matches these filters.
@@ -613,7 +815,7 @@ export default function Posy() {
           </div>
         )}
 
-        {state === "loaded" && artwork && (
+        {!showCollection && state === "loaded" && artwork && (
           <div style={{ animation: "fadeIn 0.5s ease", paddingTop: 28 }}>
             <div style={{ marginBottom: 10, fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: COLORS.muted }}>
               {artwork.collection}
@@ -787,6 +989,31 @@ export default function Posy() {
               </div>
             )}
 
+            {/* ── Add to bouquet ───────────────────────────────────── */}
+            {(() => {
+              const imageId = artwork.sourceUrl;
+              const isSaved = savedIds.has(imageId);
+              return (
+                <div style={{ marginTop: 6, marginBottom: 8 }}>
+                  <button
+                    onClick={() => handleSave(artwork)}
+                    style={{
+                      background: "transparent", border: "none",
+                      color: isSaved ? COLORS.ink : COLORS.muted,
+                      fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
+                      cursor: "pointer", fontFamily: "inherit", padding: 0,
+                      borderBottom: `1px solid ${isSaved ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.2)"}`,
+                      paddingBottom: 1, transition: "all 0.2s",
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.color = "#ffffff"; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = isSaved ? COLORS.ink : COLORS.muted; }}
+                  >
+                    {isSaved ? 'in your bouquet' : 'add to bouquet'}
+                  </button>
+                </div>
+              );
+            })()}
+
             <div style={{ borderTop: `1px solid ${COLORS.faint}`, margin: "18px 0" }} />
 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
@@ -796,6 +1023,81 @@ export default function Posy() {
           </div>
         )}
       </main>
+
+      {/* ── Auth prompt modal ─────────────────────────────────────────────── */}
+      {showAuthPrompt && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 100,
+          background: "rgba(137,196,225,0.82)",
+          backdropFilter: "blur(6px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "0 32px",
+          animation: "fadeIn 0.2s ease",
+        }}>
+          <div style={{
+            width: "100%", maxWidth: 380,
+            background: COLORS.panel,
+            padding: "28px 28px 24px",
+            borderLeft: `2px solid ${COLORS.faint}`,
+            fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif",
+          }}>
+            {authState !== 'sent' ? (
+              <>
+                <p style={{ margin: "0 0 18px", fontSize: 14, color: COLORS.muted, lineHeight: 1.7, fontStyle: "italic" }}>
+                  enter your email to save this to your bouquet.
+                </p>
+                <input
+                  type="email"
+                  value={authEmail}
+                  onChange={e => setAuthEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && sendMagicLink()}
+                  placeholder="your@email.com"
+                  autoFocus
+                  style={{
+                    width: "100%", background: "transparent", border: "none",
+                    borderBottom: "1px solid rgba(255,255,255,0.35)",
+                    color: "#ffffff", fontFamily: "inherit",
+                    fontSize: 14, fontStyle: "italic",
+                    padding: "4px 0", outline: "none",
+                    letterSpacing: "0.02em", boxSizing: "border-box",
+                    marginBottom: 18,
+                  }}
+                />
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <button
+                    onClick={sendMagicLink}
+                    disabled={authState === 'sending'}
+                    style={{
+                      background: "transparent", border: "1px solid rgba(255,255,255,0.6)",
+                      color: "#ffffff", padding: "6px 20px",
+                      fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase",
+                      cursor: authState === 'sending' ? "default" : "pointer",
+                      fontFamily: "inherit", opacity: authState === 'sending' ? 0.5 : 1,
+                      transition: "all 0.22s ease",
+                    }}
+                  >
+                    {authState === 'sending' ? '...' : 'send link'}
+                  </button>
+                  <button onClick={() => {
+                    setShowAuthPrompt(false);
+                    pendingSaveRef.current = null;
+                    setAuthState('idle');
+                    setAuthEmail('');
+                  }} style={{
+                    background: "transparent", border: "none", color: COLORS.muted,
+                    fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
+                    cursor: "pointer", fontFamily: "inherit", padding: 0,
+                  }}>cancel</button>
+                </div>
+              </>
+            ) : (
+              <p style={{ margin: 0, fontSize: 14, color: COLORS.muted, lineHeight: 1.7, fontStyle: "italic" }}>
+                check your email — a link is on its way.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Falling petals — loading screen only */}
       {state === "loading" && petals.map((p, i) => (
@@ -876,6 +1178,7 @@ export default function Posy() {
           100% { transform: translateX(12px)  rotate(2deg);  }
         }
         input::placeholder { color: rgba(255,255,255,0.35); font-style: italic; }
+        textarea::placeholder { color: rgba(255,255,255,0.35); font-style: italic; }
       `}</style>
     </div>
   );
