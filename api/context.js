@@ -23,7 +23,7 @@ export default async function handler(req) {
     return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400 });
   }
 
-  const { title, artist, date, origin, medium, collection, context, question } = body;
+  const { title, artist, date, origin, medium, collection, context, question, imageUrl } = body;
 
   let system, userMessage, maxTokens;
 
@@ -43,7 +43,13 @@ export default async function handler(req) {
   } else {
     system = CONTEXT_SYSTEM;
     maxTokens = 300;
-    userMessage = `Title: ${title}\nArtist/maker: ${artist}\nDate: ${date}\nOrigin: ${origin}\nMedium: ${medium}\nCollection: ${collection}\n\nWrite vivid, surprising context for this object.`;
+    const metaText = `Title: ${title}\nArtist/maker: ${artist}\nDate: ${date}\nOrigin: ${origin}\nMedium: ${medium}\nCollection: ${collection}\n\nWrite vivid, surprising context for this object.`;
+    userMessage = imageUrl
+      ? [
+          { type: "image", source: { type: "url", url: imageUrl } },
+          { type: "text", text: metaText },
+        ]
+      : metaText;
   }
 
   const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {

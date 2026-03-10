@@ -298,6 +298,8 @@ export default function Posy() {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [feedbackState, setFeedbackState] = useState('idle'); // idle | sending | sent
   const [context, setContext] = useState("");
   const [contextState, setContextState] = useState("idle"); // idle | loading | loaded
   const [askState, setAskState]         = useState("idle"); // idle | open | loading | answered
@@ -404,6 +406,21 @@ export default function Posy() {
     }
   }, [artwork, context]);
 
+  async function submitFeedback() {
+    if (!feedbackText.trim()) return;
+    setFeedbackState('sending');
+    try {
+      await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: feedbackText }),
+      });
+      setFeedbackState('sent');
+    } catch (e) {
+      setFeedbackState('idle');
+    }
+  }
+
   const tellMeMore = useCallback(async () => {
     if (!artwork || contextState === "loading" || contextState === "loaded") return;
     setContextState("loading");
@@ -419,6 +436,7 @@ export default function Posy() {
           origin: artwork.origin,
           medium: artwork.medium,
           collection: artwork.collection,
+          imageUrl: artwork.imageUrl,
         }),
       });
       if (!res.ok) throw new Error("Context fetch failed");
@@ -472,7 +490,13 @@ export default function Posy() {
               </span>
             </div>
           </div>
-          <button onClick={() => setShowAbout(v => !v)} style={{
+          <button onClick={() => {
+            setShowAbout(v => !v);
+            if (showAbout) {
+              setFeedbackText('');
+              setFeedbackState('idle');
+            }
+          }} style={{
             background: "transparent", border: "none", color: COLORS.muted,
             fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
             cursor: "pointer", fontFamily: "inherit", padding: 0,
@@ -485,10 +509,49 @@ export default function Posy() {
             fontSize: 13, color: COLORS.muted, lineHeight: 1.9,
             borderLeft: `2px solid ${COLORS.faint}`, animation: "fadeIn 0.25s ease",
           }}>
-            Posy draws from the Art Institute of Chicago, Rijksmuseum, Metropolitan Museum
-            of Art, and the Smithsonian's Freer Gallery and Cooper Hewitt Design Museum —
-            hundreds of thousands of open-access works spanning every culture and era.
-            Images come directly from the museums. Hit "tell me more" for Claude's take.
+            Posy is a wandering curator. Every image comes from an open archive somewhere
+            in the world — a museum, a library, a national collection. None of it was chosen
+            for you. All of it might be.
+
+            <div style={{ borderTop: `1px solid ${COLORS.faint}`, margin: "12px 0" }} />
+
+            {feedbackState === 'sent' ? (
+              <p style={{ margin: 0, fontStyle: "italic" }}>thank you.</p>
+            ) : (
+              <div>
+                <textarea
+                  value={feedbackText}
+                  onChange={e => setFeedbackText(e.target.value)}
+                  placeholder="what's working, what isn't, what you found..."
+                  rows={3}
+                  style={{
+                    width: "100%", background: "transparent", border: "none",
+                    borderBottom: "1px solid rgba(255,255,255,0.35)",
+                    color: "#ffffff", fontFamily: "inherit",
+                    fontSize: 13, fontStyle: "italic",
+                    padding: "4px 0", outline: "none",
+                    letterSpacing: "0.02em", resize: "none",
+                    lineHeight: 1.7, boxSizing: "border-box",
+                  }}
+                />
+                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
+                  <button
+                    onClick={submitFeedback}
+                    disabled={feedbackState === 'sending'}
+                    style={{
+                      background: "transparent", border: "1px solid rgba(255,255,255,0.6)",
+                      color: "#ffffff", padding: "6px 20px",
+                      fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase",
+                      cursor: feedbackState === 'sending' ? "default" : "pointer",
+                      fontFamily: "inherit", opacity: feedbackState === 'sending' ? 0.5 : 1,
+                      transition: "all 0.22s ease",
+                    }}
+                  >
+                    {feedbackState === 'sending' ? 'sending' : 'send'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </header>
