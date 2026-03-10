@@ -547,7 +547,7 @@ export default function Posy() {
                       transition: "all 0.22s ease",
                     }}
                   >
-                    {feedbackState === 'sending' ? 'sending' : 'send'}
+                    {feedbackState === 'sending' ? 'sending' : 'feedback'}
                   </button>
                 </div>
               </div>
