@@ -366,8 +366,13 @@ export default function Posy() {
         setUser(u);
         if (u) {
           loadSaves(u.id);
-          if (pendingSaveRef.current) {
-            saveImage(pendingSaveRef.current, u.id);
+          const pending = pendingSaveRef.current ?? (() => {
+            const raw = sessionStorage.getItem('pendingSave');
+            if (raw) { sessionStorage.removeItem('pendingSave'); return JSON.parse(raw); }
+            return null;
+          })();
+          if (pending) {
+            saveImage(pending, u.id);
             pendingSaveRef.current = null;
           }
         }
@@ -489,6 +494,7 @@ export default function Posy() {
   async function handleSave(image) {
     if (!user) {
       pendingSaveRef.current = image;
+      sessionStorage.setItem('pendingSave', JSON.stringify(image));
       setShowAuthPrompt(true);
       return;
     }
