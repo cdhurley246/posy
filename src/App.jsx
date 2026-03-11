@@ -298,7 +298,8 @@ export default function Posy() {
   const [artwork, setArtwork] = useState(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
-  const [showAbout, setShowAbout] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [morePanel, setMorePanel] = useState(null); // null | "about" | "feedback" | "bouquet"
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackState, setFeedbackState] = useState('idle'); // idle | sending | sent
   const [context, setContext] = useState("");
@@ -347,6 +348,8 @@ export default function Posy() {
   // Ref so discover() always reads the latest filters without being in its dep array
   const filtersRef = useRef({ source: null, era: null, culture: null });
 
+  const moreMenuRef = useRef(null);
+
   const BouquetComponent = BOUQUETS[bouquetIndex];
 
   // ── Auth listener ─────────────────────────────────────────────────────────
@@ -377,6 +380,18 @@ export default function Posy() {
   useEffect(() => {
     if (showCollection && user) loadCollection(user.id);
   }, [showCollection]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Close More dropdown when clicking outside ──────────────────────────────
+  useEffect(() => {
+    if (!showMoreMenu) return;
+    function handleClickOutside(e) {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target)) {
+        setShowMoreMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showMoreMenu]);
 
   // discover() accepts an optional filtersOverride so filter changes can pass fresh
   // values immediately (setState is async; the ref is updated synchronously before calling).
@@ -597,28 +612,62 @@ export default function Posy() {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            {user && (
-              <button onClick={() => setShowCollection(true)} style={{
-                background: "transparent", border: "none", color: COLORS.muted,
-                fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
-                cursor: "pointer", fontFamily: "inherit", padding: 0,
-              }}>your bouquet</button>
-            )}
-            <button onClick={() => {
-              setShowAbout(v => !v);
-              if (showAbout) {
-                setFeedbackText('');
-                setFeedbackState('idle');
-              }
-            }} style={{
-              background: "transparent", border: "none", color: COLORS.muted,
-              fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
-              cursor: "pointer", fontFamily: "inherit", padding: 0,
-            }}>{showAbout ? "close" : "about"}</button>
+            <div ref={moreMenuRef} style={{ position: "relative" }}>
+              <button
+                onClick={() => setShowMoreMenu(v => !v)}
+                style={{
+                  background: "transparent", border: "none", color: COLORS.muted,
+                  fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
+                  cursor: "pointer", fontFamily: "inherit", padding: 0,
+                }}
+              >
+                {showMoreMenu ? "close" : "more"}
+              </button>
+              {showMoreMenu && (
+                <div style={{
+                  position: "absolute", right: 0, top: "calc(100% + 10px)",
+                  background: "#6aaecb", border: `1px solid ${COLORS.faint}`,
+                  display: "flex", flexDirection: "column",
+                  minWidth: 110, zIndex: 50, animation: "fadeIn 0.15s ease",
+                }}>
+                  {["about", "bouquet", "feedback"].map((item, i, arr) => (
+                    <button
+                      key={item}
+                      onClick={() => {
+                        setShowMoreMenu(false);
+                        if (item === "bouquet") {
+                          if (user) {
+                            setMorePanel(null);
+                            setShowCollection(true);
+                          } else {
+                            setMorePanel(morePanel === "bouquet" ? null : "bouquet");
+                          }
+                        } else {
+                          setMorePanel(morePanel === item ? null : item);
+                          if (item === "feedback") {
+                            setFeedbackText('');
+                            setFeedbackState('idle');
+                          }
+                        }
+                      }}
+                      style={{
+                        background: "transparent", border: "none",
+                        borderBottom: i < arr.length - 1 ? `1px solid ${COLORS.faint}` : "none",
+                        color: COLORS.ink, fontSize: 11, letterSpacing: "0.12em",
+                        textTransform: "uppercase", cursor: "pointer",
+                        fontFamily: "inherit", padding: "10px 16px", textAlign: "left",
+                      }}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {showAbout && (
+        {morePanel === "about" && (
           <div style={{
             marginTop: 12, padding: "12px 16px", background: COLORS.panel,
             fontSize: 13, color: COLORS.muted, lineHeight: 1.9,
@@ -628,8 +677,26 @@ export default function Posy() {
             in the world — a museum, a library, a national collection. None of it was chosen
             for you. All of it might be.
 
-            <div style={{ borderTop: `1px solid ${COLORS.faint}`, margin: "12px 0" }} />
+            {user && (
+              <>
+                <div style={{ borderTop: `1px solid ${COLORS.faint}`, margin: "12px 0" }} />
+                <button onClick={signOut} style={{
+                  background: "transparent", border: "none", color: COLORS.muted,
+                  fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase",
+                  cursor: "pointer", fontFamily: "inherit", padding: 0,
+                  fontStyle: "italic",
+                }}>sign out</button>
+              </>
+            )}
+          </div>
+        )}
 
+        {morePanel === "feedback" && (
+          <div style={{
+            marginTop: 12, padding: "12px 16px", background: COLORS.panel,
+            fontSize: 13, color: COLORS.muted, lineHeight: 1.9,
+            borderLeft: `2px solid ${COLORS.faint}`, animation: "fadeIn 0.25s ease",
+          }}>
             {feedbackState === 'sent' ? (
               <p style={{ margin: 0, fontStyle: "italic" }}>thank you.</p>
             ) : (
@@ -637,7 +704,7 @@ export default function Posy() {
                 <textarea
                   value={feedbackText}
                   onChange={e => setFeedbackText(e.target.value)}
-                  placeholder="feedback"
+                  placeholder="suggestions, ideas, requests…"
                   rows={3}
                   style={{
                     width: "100%", background: "transparent", border: "none",
@@ -667,17 +734,56 @@ export default function Posy() {
                 </div>
               </div>
             )}
+          </div>
+        )}
 
-            {user && (
-              <>
-                <div style={{ borderTop: `1px solid ${COLORS.faint}`, margin: "12px 0" }} />
-                <button onClick={signOut} style={{
-                  background: "transparent", border: "none", color: COLORS.muted,
-                  fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase",
-                  cursor: "pointer", fontFamily: "inherit", padding: 0,
-                  fontStyle: "italic",
-                }}>sign out</button>
-              </>
+        {morePanel === "bouquet" && !user && (
+          <div style={{
+            marginTop: 12, padding: "12px 16px", background: COLORS.panel,
+            fontSize: 13, color: COLORS.muted, lineHeight: 1.9,
+            borderLeft: `2px solid ${COLORS.faint}`, animation: "fadeIn 0.25s ease",
+          }}>
+            Your bouquet is a collection of images you've saved while wandering. Sign in to
+            keep them across visits.
+
+            <div style={{ borderTop: `1px solid ${COLORS.faint}`, margin: "12px 0" }} />
+
+            {authState === 'sent' ? (
+              <p style={{ margin: 0, fontStyle: "italic" }}>check your email for a sign-in link.</p>
+            ) : (
+              <div>
+                <input
+                  type="email"
+                  value={authEmail}
+                  onChange={e => setAuthEmail(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && sendMagicLink()}
+                  placeholder="your email"
+                  style={{
+                    width: "100%", background: "transparent", border: "none",
+                    borderBottom: "1px solid rgba(255,255,255,0.35)",
+                    color: "#ffffff", fontFamily: "inherit",
+                    fontSize: 13, fontStyle: "italic",
+                    padding: "4px 0", outline: "none",
+                    letterSpacing: "0.02em", boxSizing: "border-box",
+                  }}
+                />
+                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
+                  <button
+                    onClick={sendMagicLink}
+                    disabled={authState === 'sending'}
+                    style={{
+                      background: "transparent", border: "1px solid rgba(255,255,255,0.6)",
+                      color: "#ffffff", padding: "6px 20px",
+                      fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase",
+                      cursor: authState === 'sending' ? "default" : "pointer",
+                      fontFamily: "inherit", opacity: authState === 'sending' ? 0.5 : 1,
+                      transition: "all 0.22s ease",
+                    }}
+                  >
+                    {authState === 'sending' ? 'sending' : 'sign in'}
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         )}
