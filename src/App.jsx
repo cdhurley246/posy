@@ -521,7 +521,7 @@ export default function Posy() {
     setAuthState('sending');
     const { error } = await supabase.auth.signInWithOtp({
       email: authEmail,
-      options: { emailRedirectTo: 'https://posy-eight.vercel.app' },
+      options: { emailRedirectTo: window.location.origin },
     });
     setAuthState(error ? 'idle' : 'sent');
   }
