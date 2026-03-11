@@ -111,8 +111,10 @@ async function fetchSupabase() {
     Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
   };
 
+  const excludeFinnish = "&source_institution=not.ilike.*Finnish*&source_institution=not.ilike.*Helsinki*";
+
   // 1. Get total row count so we can pick a truly random offset
-  const countRes = await fetch(`${SUPABASE_URL}/rest/v1/images?select=id`, {
+  const countRes = await fetch(`${SUPABASE_URL}/rest/v1/images?select=id${excludeFinnish}`, {
     headers: { ...headers, Prefer: "count=exact", "Range-Unit": "items", Range: "0-0" },
   });
   if (!countRes.ok) throw new Error(`Supabase count ${countRes.status}`);
@@ -122,7 +124,7 @@ async function fetchSupabase() {
   // 2. Fetch one random row
   const offset = Math.floor(Math.random() * total);
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/images?select=*&limit=1&offset=${offset}`,
+    `${SUPABASE_URL}/rest/v1/images?select=*${excludeFinnish}&limit=1&offset=${offset}`,
     { headers },
   );
   if (!res.ok) throw new Error(`Supabase fetch ${res.status}`);
@@ -403,7 +405,7 @@ const FETCHERS = [
   fetchAIC, fetchAIC,
   fetchRijks, fetchMet,
   fetchSupabase, fetchSupabase,
-  fetchEuropeana, fetchEuropeana,
+  fetchEuropeana,
   fetchLOC, fetchLOC,
   fetchVAM, fetchVAM,
   fetchCleveland, fetchCleveland,
